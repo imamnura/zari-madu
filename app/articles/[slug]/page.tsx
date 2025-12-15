@@ -8,12 +8,13 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { notFound } from "next/navigation";
 
-export default function ArticleDetailPage({
+export default async function ArticleDetailPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const article = ARTICLES.find((a) => a.slug === params.slug);
+  const { slug } = await params;
+  const article = ARTICLES.find((a) => a.slug === slug);
 
   if (!article) {
     notFound();
