@@ -74,3 +74,15 @@ model PartnershipContent {
 
   @@map("partnership_contents")
 }
+
+model ArticleContent {
+  id          String   @id @default(cuid())
+  heading     String
+  title       String
+  description String   @db.Text
+  articles    Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("article_contents")
+}

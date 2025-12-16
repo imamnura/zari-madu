@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,59 @@ import { Calendar, Clock, ArrowRight } from "lucide-react";
 import { ARTICLES } from "@/lib/constants";
 import Link from "next/link";
 
+interface Article {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  image: string;
+  category: string;
+  author: string;
+  date: string;
+  readTime: string;
+  content: string;
+  tags: string[];
+}
+
+interface ArticleContent {
+  heading: string;
+  title: string;
+  description: string;
+  articles: Article[];
+}
+
 export function ArticlesSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const [content, setContent] = useState<ArticleContent>({
+    heading: "Artikel & Tips",
+    title: "Edukasi Sehat dengan Madu",
+    description:
+      "Tips, resep, dan informasi bermanfaat seputar madu dan kesehatan",
+    articles: ARTICLES,
+  });
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const response = await fetch("/api/admin/articles-content");
+        if (response.ok) {
+          const data = await response.json();
+          // Only update if we have articles from the API
+          if (data.articles && data.articles.length > 0) {
+            setContent(data);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching articles content:", error);
+        // Use constants as fallback
+      }
+    };
+
+    fetchContent();
+  }, []);
+
+  const displayArticles = content.articles.slice(0, 4);
 
   return (
     <section
@@ -28,18 +78,18 @@ export function ArticlesSection() {
           className="text-center mb-16"
         >
           <Badge className="bg-amber-100 text-amber-800 mb-4">
-            Artikel & Tips
+            {content.heading}
           </Badge>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Edukasi Sehat dengan Madu
+            {content.title}
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-            Tips, resep, dan informasi bermanfaat seputar madu dan kesehatan
+            {content.description}
           </p>
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {ARTICLES.slice(0, 4).map((article, index) => (
+          {displayArticles.map((article, index) => (
             <motion.div
               key={article.id}
               initial={{ opacity: 0, y: 30 }}
@@ -53,12 +103,27 @@ export function ArticlesSection() {
                     <Badge className="absolute top-4 left-4 bg-amber-600 text-white z-10">
                       {article.category}
                     </Badge>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center p-8">
-                        <div className="text-6xl mb-2">📰</div>
-                        <p className="text-xs text-amber-800">Article Image</p>
+                    {article.image ? (
+                      <img
+                        src={article.image}
+                        alt={article.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        onError={(e) => {
+                          // Fallback to default placeholder on error
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center p-8">
+                          <div className="text-6xl mb-2">📰</div>
+                          <p className="text-xs text-amber-800">
+                            Article Image
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <div className="absolute inset-0 bg-amber-600/0 group-hover:bg-amber-600/10 transition-colors duration-300" />
                   </div>
 

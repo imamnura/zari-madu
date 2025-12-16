@@ -7,6 +7,29 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+
+async function getArticles() {
+  try {
+    const content = await prisma.articleContent.findFirst({
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (!content || !content.articles) {
+      return ARTICLES;
+    }
+
+    const articles =
+      typeof content.articles === "string"
+        ? JSON.parse(content.articles)
+        : content.articles;
+
+    return articles.length > 0 ? articles : ARTICLES;
+  } catch (error) {
+    console.error("Error fetching articles:", error);
+    return ARTICLES;
+  }
+}
 
 export default async function ArticleDetailPage({
   params,
@@ -14,17 +37,17 @@ export default async function ArticleDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = ARTICLES.find((a) => a.slug === slug);
+  const articles = await getArticles();
+  const article = articles.find((a: any) => a.slug === slug);
 
   if (!article) {
     notFound();
   }
 
-  // Get related articles (exclude current article)
-  const relatedArticles = ARTICLES.filter((a) => a.id !== article.id).slice(
-    0,
-    3
-  );
+  // Get related articles (exclude current article, max 3)
+  const relatedArticles = articles
+    .filter((a: any) => a.id !== article.id)
+    .slice(0, 3);
 
   return (
     <div className="min-h-screen">
@@ -66,7 +89,7 @@ export default async function ArticleDetailPage({
 
             {/* Tags */}
             <div className="flex flex-wrap gap-2">
-              {article.tags.map((tag) => (
+              {article.tags.map((tag: string) => (
                 <Badge
                   key={tag}
                   variant="secondary"
@@ -79,11 +102,21 @@ export default async function ArticleDetailPage({
           </div>
 
           {/* Featured Image */}
-          <div className="w-full aspect-video bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl overflow-hidden mb-12 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-9xl mb-4">📰</div>
-              <p className="text-amber-800">Article Featured Image</p>
-            </div>
+          <div className="w-full aspect-video bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl overflow-hidden mb-12">
+            {article.image ? (
+              <img
+                src={article.image}
+                alt={article.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="text-9xl mb-4">📰</div>
+                  <p className="text-amber-800">Article Featured Image</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Article Content */}
@@ -92,36 +125,6 @@ export default async function ArticleDetailPage({
               className="article-content"
               dangerouslySetInnerHTML={{ __html: article.content }}
             />
-
-            {/* Placeholder content if content is empty */}
-            {!article.content && (
-              <div className="space-y-6">
-                <p className="text-gray-700 leading-relaxed">
-                  {article.excerpt}
-                </p>
-                <p className="text-gray-700 leading-relaxed">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  Ut enim ad minim veniam, quis nostrud exercitation ullamco
-                  laboris.
-                </p>
-                <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">
-                  Manfaat Utama
-                </h2>
-                <ul className="space-y-2 text-gray-700">
-                  <li>✓ Meningkatkan kesehatan secara keseluruhan</li>
-                  <li>✓ Memberikan energi natural sepanjang hari</li>
-                  <li>✓ Kaya akan antioksidan dan nutrisi</li>
-                  <li>✓ Membantu meningkatkan sistem imun tubuh</li>
-                </ul>
-                <p className="text-gray-700 leading-relaxed">
-                  Duis aute irure dolor in reprehenderit in voluptate velit esse
-                  cillum dolore eu fugiat nulla pariatur. Excepteur sint
-                  occaecat cupidatat non proident, sunt in culpa qui officia
-                  deserunt mollit anim id est laborum.
-                </p>
-              </div>
-            )}
           </div>
 
           {/* CTA Box */}
@@ -152,7 +155,7 @@ export default async function ArticleDetailPage({
               Artikel Terkait
             </h2>
             <div className="grid md:grid-cols-3 gap-8">
-              {relatedArticles.map((relatedArticle) => (
+              {relatedArticles.map((relatedArticle: any) => (
                 <Link
                   key={relatedArticle.id}
                   href={`/articles/${relatedArticle.slug}`}
@@ -162,9 +165,17 @@ export default async function ArticleDetailPage({
                       <Badge className="absolute top-4 left-4 bg-amber-600 text-white z-10">
                         {relatedArticle.category}
                       </Badge>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-6xl">📰</div>
-                      </div>
+                      {relatedArticle.image ? (
+                        <img
+                          src={relatedArticle.image}
+                          alt={relatedArticle.title}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-6xl">📰</div>
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-amber-600/0 group-hover:bg-amber-600/10 transition-colors duration-300" />
                     </div>
                     <CardHeader className="pb-3">
@@ -194,8 +205,9 @@ export default async function ArticleDetailPage({
 }
 
 // Generate static params for all articles
-export function generateStaticParams() {
-  return ARTICLES.map((article) => ({
+export async function generateStaticParams() {
+  const articles = await getArticles();
+  return articles.map((article: any) => ({
     slug: article.slug,
   }));
 }

@@ -6,8 +6,34 @@ import { ARTICLES } from "@/lib/constants";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { prisma } from "@/lib/prisma";
 
-export default function ArticlesPage() {
+async function getArticles() {
+  try {
+    const content = await prisma.articleContent.findFirst({
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (!content || !content.articles) {
+      return ARTICLES;
+    }
+
+    // Parse articles from JSON
+    const articles =
+      typeof content.articles === "string"
+        ? JSON.parse(content.articles)
+        : content.articles;
+
+    return articles.length > 0 ? articles : ARTICLES;
+  } catch (error) {
+    console.error("Error fetching articles:", error);
+    return ARTICLES;
+  }
+}
+
+export default async function ArticlesPage() {
+  const articles = await getArticles();
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -32,7 +58,7 @@ export default function ArticlesPage() {
 
           {/* Articles Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {ARTICLES.map((article) => (
+            {articles.map((article: any) => (
               <Link key={article.id} href={`/articles/${article.slug}`}>
                 <Card className="h-full hover:shadow-2xl transition-all duration-300 group overflow-hidden border-2 hover:border-amber-300 cursor-pointer">
                   {/* Article Image */}
@@ -40,12 +66,22 @@ export default function ArticlesPage() {
                     <Badge className="absolute top-4 left-4 bg-amber-600 text-white z-10">
                       {article.category}
                     </Badge>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center p-8">
-                        <div className="text-6xl mb-2">📰</div>
-                        <p className="text-xs text-amber-800">Article Image</p>
+                    {article.image ? (
+                      <img
+                        src={article.image}
+                        alt={article.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center p-8">
+                          <div className="text-6xl mb-2">📰</div>
+                          <p className="text-xs text-amber-800">
+                            Article Image
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <div className="absolute inset-0 bg-amber-600/0 group-hover:bg-amber-600/10 transition-colors duration-300" />
                   </div>
 

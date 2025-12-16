@@ -208,6 +208,80 @@ async function main() {
   });
 
   console.log("✅ Partnership content created");
+
+  // Create default article content
+  const articleContent = await prisma.articleContent.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      heading: "Artikel & Tips",
+      title: "Edukasi Sehat dengan Madu",
+      description:
+        "Pelajari lebih dalam tentang dunia madu, kesehatan, dan gaya hidup sehat melalui artikel-artikel pilihan kami.",
+      articles: JSON.stringify([
+        {
+          id: 1,
+          slug: "manfaat-madu-untuk-kesehatan",
+          title: "10 Manfaat Madu untuk Kesehatan yang Wajib Anda Ketahui",
+          excerpt:
+            "Madu bukan hanya pemanis alami, tapi juga memiliki segudang manfaat untuk kesehatan tubuh. Simak 10 manfaat luar biasa dari madu murni.",
+          image: "/images/articles/manfaat-madu.jpg",
+          category: "Kesehatan",
+          author: "Dr. Sarah Nutrition",
+          date: "10 Desember 2025",
+          readTime: "5 min",
+          content: `<h2>Madu: Superfood Alami dari Alam</h2><p>Madu telah digunakan sejak ribuan tahun lalu sebagai obat alami dan sumber nutrisi. Produk alami ini mengandung berbagai vitamin, mineral, enzim, dan antioksidan yang sangat bermanfaat bagi kesehatan tubuh kita.</p><h3>1. Meningkatkan Sistem Kekebalan Tubuh</h3><p>Madu murni mengandung antioksidan dan antibakteri yang membantu melawan infeksi dan meningkatkan sistem imun tubuh.</p>`,
+          tags: ["kesehatan", "madu", "nutrisi"],
+        },
+        {
+          id: 2,
+          slug: "cara-membedakan-madu-asli-dan-palsu",
+          title: "Cara Mudah Membedakan Madu Asli dan Palsu",
+          excerpt:
+            "Tips praktis untuk mengidentifikasi madu murni dan menghindari produk palsu di pasaran.",
+          image: "/images/articles/madu-asli.jpg",
+          category: "Tips",
+          author: "Tim Zari Life",
+          date: "8 Desember 2025",
+          readTime: "4 min",
+          content: `<h2>Kenali Ciri-ciri Madu Asli</h2><p>Dengan maraknya madu palsu di pasaran, penting untuk mengetahui cara membedakan madu asli dan palsu.</p><h3>1. Tes Air</h3><p>Teteskan madu ke dalam segelas air dingin. Madu asli akan tenggelam dan mengendap di dasar gelas.</p>`,
+          tags: ["tips", "madu asli", "edukasi"],
+        },
+        {
+          id: 3,
+          slug: "resep-minuman-sehat-dengan-madu",
+          title:
+            "5 Resep Minuman Sehat dengan Madu untuk Meningkatkan Imunitas",
+          excerpt:
+            "Kreasi minuman sehat berbahan dasar madu yang mudah dibuat di rumah untuk menjaga kesehatan keluarga.",
+          image: "/images/articles/resep-madu.jpg",
+          category: "Resep",
+          author: "Chef Healthy",
+          date: "5 Desember 2025",
+          readTime: "6 min",
+          content: `<h2>Minuman Sehat untuk Keluarga</h2><p>Madu bisa diolah menjadi berbagai minuman sehat yang nikmat dan mudah dibuat di rumah.</p><h3>1. Lemon Honey Tea</h3><p>Campurkan air lemon dan madu dalam air hangat untuk minuman yang menyegarkan.</p>`,
+          tags: ["resep", "minuman", "imunitas"],
+        },
+        {
+          id: 4,
+          slug: "proses-produksi-madu-zari-life",
+          title: "Di Balik Layar: Proses Produksi Madu Zari Life",
+          excerpt:
+            "Ikuti perjalanan madu dari sarang lebah hingga botol premium di tangan Anda.",
+          image: "/images/articles/produksi.jpg",
+          category: "Behind The Scene",
+          author: "Tim Zari Life",
+          date: "1 Desember 2025",
+          readTime: "7 min",
+          content: `<h2>Dari Hutan ke Meja Anda</h2><p>Setiap botol madu Zari Life melalui proses yang ketat dan penuh perhatian untuk memastikan kualitas premium sampai ke tangan Anda.</p>`,
+          tags: ["produksi", "kualitas", "behind the scene"],
+        },
+      ]),
+    },
+  });
+
+  console.log("✅ Article content created");
 }
 
 main()
