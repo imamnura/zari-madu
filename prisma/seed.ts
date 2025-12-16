@@ -62,6 +62,57 @@ async function main() {
   });
 
   console.log("✅ About content created");
+
+  // Create default why choose content
+  const whyChooseContent = await prisma.whyChooseContent.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      heading: "Mengapa Memilih Zari Life?",
+      title: "Komitmen kami pada kualitas dan kepuasan Anda",
+      criteria: JSON.stringify([
+        {
+          icon: "ShieldCheck",
+          title: "Jaminan Kemurnian",
+          description:
+            "100% madu murni tanpa campuran gula atau bahan lain. Tersertifikasi lab independen.",
+        },
+        {
+          icon: "Sparkles",
+          title: "Premium Quality",
+          description:
+            "Dipilih dari sumber terbaik dengan standar kualitas tertinggi untuk pengalaman premium.",
+        },
+        {
+          icon: "Leaf",
+          title: "Natural & Organic",
+          description:
+            "Diproses minimal untuk mempertahankan enzim, vitamin, dan mineral alami.",
+        },
+        {
+          icon: "MapPin",
+          title: "Single-Origin",
+          description:
+            "Setiap varian berasal dari satu sumber nektar untuk rasa dan aroma yang khas.",
+        },
+        {
+          icon: "Users",
+          title: "Mendukung Peternak Lokal",
+          description:
+            "Bermitra langsung dengan peternak lebah lokal untuk keberlanjutan ekonomi.",
+        },
+        {
+          icon: "Award",
+          title: "Trusted Brand",
+          description:
+            "Dipercaya lebih dari 1 juta pelanggan di seluruh Indonesia.",
+        },
+      ]),
+    },
+  });
+
+  console.log("✅ Why Choose content created");
 }
 
 main()

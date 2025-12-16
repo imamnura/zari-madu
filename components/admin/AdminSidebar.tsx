@@ -11,6 +11,7 @@ import {
   ChevronRight,
   X,
   Info,
+  Award,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -29,6 +30,11 @@ const menuItems = [
     label: "About Section",
     href: "/admin/dashboard/about",
     icon: Info,
+  },
+  {
+    label: "Why Choose",
+    href: "/admin/dashboard/why-choose",
+    icon: Award,
   },
   {
     label: "Artikel",

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   ShieldCheck,
   Sparkles,
@@ -10,6 +10,10 @@ import {
   MapPin,
   Users,
   Award,
+  Heart,
+  Star,
+  Zap,
+  Globe,
 } from "lucide-react";
 import { WHY_CHOOSE_ZARI } from "@/lib/constants";
 
@@ -20,11 +24,46 @@ const iconMap = {
   MapPin,
   Users,
   Award,
+  Heart,
+  Star,
+  Zap,
+  Globe,
+};
+
+type WhyChooseData = {
+  heading: string;
+  title: string;
+  criteria: Array<{
+    icon: string;
+    title: string;
+    description: string;
+  }>;
 };
 
 export function WhyChooseSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const [content, setContent] = useState<WhyChooseData>({
+    heading: "Mengapa Memilih Zari Life?",
+    title: "Komitmen kami pada kualitas dan kepuasan Anda",
+    criteria: WHY_CHOOSE_ZARI,
+  });
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const res = await fetch("/api/admin/why-choose-content");
+        if (res.ok) {
+          const data = await res.json();
+          setContent(data);
+        }
+      } catch (error) {
+        console.error("Error fetching why choose content:", error);
+      }
+    };
+
+    fetchContent();
+  }, []);
 
   return (
     <section id="why-zari" ref={ref} className="py-20 lg:py-32 bg-white">
@@ -36,15 +75,15 @@ export function WhyChooseSection() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Mengapa Memilih Zari Life?
+            {content.heading}
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-            Komitmen kami pada kualitas dan kepuasan Anda
+            {content.title}
           </p>
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
-          {WHY_CHOOSE_ZARI.map((item, index) => {
+          {content.criteria.map((item, index) => {
             const Icon = iconMap[item.icon as keyof typeof iconMap];
 
             return (
@@ -66,7 +105,7 @@ export function WhyChooseSection() {
                     whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.1 }}
                     transition={{ duration: 0.5 }}
                   >
-                    <Icon className="w-10 h-10 text-amber-600" />
+                    {Icon && <Icon className="w-10 h-10 text-amber-600" />}
                   </motion.div>
                   <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-amber-700 transition-colors">
                     {item.title}
