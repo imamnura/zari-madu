@@ -156,6 +156,58 @@ async function main() {
   });
 
   console.log("✅ Testimonial content created");
+
+  // Create default partnership content
+  const partnershipContent = await prisma.partnershipContent.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      heading: "Partner & Sertifikasi",
+      title:
+        "Dipercaya dan bersertifikat resmi dari berbagai lembaga terkemuka",
+      partnerships: JSON.stringify([
+        {
+          id: 1,
+          name: "Asosiasi Perlebahan Indonesia",
+          logo: "/images/partners/api.png",
+          description: "Partner resmi dalam pengembangan industri perlebahan",
+        },
+        {
+          id: 2,
+          name: "BPOM RI",
+          logo: "/images/partners/bpom.png",
+          description: "Tersertifikasi dan terdaftar resmi",
+        },
+        {
+          id: 3,
+          name: "Halal MUI",
+          logo: "/images/partners/mui.png",
+          description: "Bersertifikat Halal MUI",
+        },
+        {
+          id: 4,
+          name: "SGS Lab",
+          logo: "/images/partners/sgs.png",
+          description: "Teruji laboratorium internasional",
+        },
+        {
+          id: 5,
+          name: "Organic Indonesia",
+          logo: "/images/partners/organic.png",
+          description: "Certified organic products",
+        },
+        {
+          id: 6,
+          name: "Koperasi Peternak Lebah",
+          logo: "/images/partners/koperasi.png",
+          description: "Mendukung peternak lokal",
+        },
+      ]),
+    },
+  });
+
+  console.log("✅ Partnership content created");
 }
 
 main()

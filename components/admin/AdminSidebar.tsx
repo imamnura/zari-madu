@@ -13,6 +13,7 @@ import {
   Info,
   Award,
   MessageSquare,
+  Handshake,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -41,6 +42,11 @@ const menuItems = [
     label: "Testimonials",
     href: "/admin/dashboard/testimonials",
     icon: MessageSquare,
+  },
+  {
+    label: "Partnerships",
+    href: "/admin/dashboard/partnerships",
+    icon: Handshake,
   },
   {
     label: "Artikel",

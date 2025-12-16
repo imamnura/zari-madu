@@ -63,3 +63,14 @@ model TestimonialContent {
 
   @@map("testimonial_contents")
 }
+
+model PartnershipContent {
+  id           String   @id @default(cuid())
+  heading      String
+  title        String
+  partnerships Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("partnership_contents")
+}

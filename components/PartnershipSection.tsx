@@ -2,13 +2,45 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PARTNERSHIPS } from "@/lib/constants";
+
+type PartnershipData = {
+  heading: string;
+  title: string;
+  partnerships: Array<{
+    id: number;
+    name: string;
+    logo: string;
+    description: string;
+  }>;
+};
 
 export function PartnershipSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const [content, setContent] = useState<PartnershipData>({
+    heading: "Partner & Sertifikasi",
+    title: "Dipercaya dan bersertifikat resmi dari berbagai lembaga terkemuka",
+    partnerships: PARTNERSHIPS,
+  });
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const res = await fetch("/api/admin/partnership-content");
+        if (res.ok) {
+          const data = await res.json();
+          setContent(data);
+        }
+      } catch (error) {
+        console.error("Error fetching partnership content:", error);
+      }
+    };
+
+    fetchContent();
+  }, []);
 
   return (
     <section ref={ref} className="py-20 lg:py-32 bg-white">
@@ -20,15 +52,15 @@ export function PartnershipSection() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Partner & Sertifikasi
+            {content.heading}
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-            Dipercaya dan bersertifikat resmi dari berbagai lembaga terkemuka
+            {content.title}
           </p>
         </motion.div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-          {PARTNERSHIPS.map((partner, index) => (
+          {content.partnerships.map((partner, index) => (
             <motion.div
               key={partner.id}
               initial={{ opacity: 0, scale: 0.8 }}
