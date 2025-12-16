@@ -282,6 +282,24 @@ async function main() {
   });
 
   console.log("✅ Article content created");
+
+  // Create default settings
+  const settings = await prisma.settings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      whatsapp: "+6285777578827",
+      instagram: "https://www.instagram.com/zarihoney",
+      email: "info@zarilife.com",
+      shopeeLink: "https://id.shp.ee/GgH8AKs",
+      mapsLocation: "https://maps.app.goo.gl/Yfnw3MHWgm2YPEeU8",
+      mapsEmbed:
+        "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15856.26522818341!2d107.44402569879621!3d-6.513291791330821!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e690d5a79b9f5f7%3A0x8213696bb15cd519!2sToko%20Madu%20ZARI%20HONEY%20%7C%20Pusat%20Dan%20Grosir%20Madu%20Asli%20(Murni)!5e0!3m2!1sen!2sid!4v1765776563151!5m2!1sen!2sid",
+    },
+  });
+
+  console.log("✅ Default settings created");
 }
 
 main()

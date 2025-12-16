@@ -2,15 +2,45 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CTA_SECTION, CONTACT_INFO, WHATSAPP_MESSAGES } from "@/lib/constants";
 import { openWhatsApp } from "@/lib/whatsapp";
 import { MessageCircle, Sparkles, ShoppingBag } from "lucide-react";
 
+interface Settings {
+  whatsapp: string;
+  instagram: string;
+  email: string;
+  shopeeLink: string;
+  mapsLocation: string;
+  mapsEmbed: string;
+}
+
+type ContactSettings = Settings | typeof CONTACT_INFO;
+
 export function CTASection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const [settings, setSettings] = useState<Settings | null>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch("/api/admin/settings");
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  const contactInfo: ContactSettings = settings || CONTACT_INFO;
 
   const particles = useMemo(
     () =>
@@ -24,15 +54,17 @@ export function CTASection() {
   );
 
   const handleOrderClick = () => {
-    openWhatsApp(CONTACT_INFO.whatsapp, WHATSAPP_MESSAGES.order);
+    openWhatsApp(contactInfo.whatsapp, WHATSAPP_MESSAGES.order);
   };
 
   const handleResellerClick = () => {
-    openWhatsApp(CONTACT_INFO.whatsapp, WHATSAPP_MESSAGES.reseller);
+    openWhatsApp(contactInfo.whatsapp, WHATSAPP_MESSAGES.reseller);
   };
 
   const handleShopeeClick = () => {
-    window.open(CONTACT_INFO.shopee, "_blank");
+    const shopeeUrl =
+      "shopeeLink" in contactInfo ? contactInfo.shopeeLink : contactInfo.shopee;
+    window.open(shopeeUrl, "_blank");
   };
 
   return (

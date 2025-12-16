@@ -119,10 +119,15 @@ export async function PUT(request: Request) {
         ? JSON.parse(content.articles)
         : content.articles;
 
-    // Revalidate homepage
+    // Revalidate homepage and articles pages
     const { revalidatePath } = await import("next/cache");
-    revalidatePath("/");
-    revalidatePath("/articles");
+    revalidatePath("/", "layout"); // Revalidate homepage
+    revalidatePath("/articles", "page"); // Revalidate articles list
+
+    // Revalidate all article detail pages
+    articles.forEach((article: any) => {
+      revalidatePath(`/articles/${article.slug}`, "page");
+    });
 
     return NextResponse.json(
       {

@@ -25,8 +25,17 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setMobileMenuOpen(false);
+  };
+
   const scrollToSection = (href: string) => {
     setMobileMenuOpen(false);
+    if (href === "#") {
+      scrollToTop();
+      return;
+    }
     const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
@@ -46,11 +55,14 @@ export function Header() {
         <div className="flex h-16 lg:h-20 items-center justify-between">
           {/* Logo */}
           <div className="flex lg:flex-1">
-            <a href="#" className="-m-1.5 p-1.5">
+            <button
+              onClick={scrollToTop}
+              className="-m-1.5 p-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+            >
               <span className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-amber-600 to-amber-800 bg-clip-text text-transparent">
                 Zari Life
               </span>
-            </a>
+            </button>
           </div>
 
           {/* Desktop Navigation */}

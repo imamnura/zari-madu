@@ -9,6 +9,10 @@ import { Footer } from "@/components/Footer";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 
+// Force dynamic rendering - no caching
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getArticles() {
   try {
     const content = await prisma.articleContent.findFirst({

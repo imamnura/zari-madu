@@ -31,24 +31,24 @@ model HeroContent {
 }
 
 model AboutContent {
-  id          String   @id @default(cuid())
-  tagline     String
-  heading     String
-  body        String   @db.Text
-  stats       Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  tagline   String
+  heading   String
+  body      String   @db.Text
+  stats     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("about_contents")
 }
 
 model WhyChooseContent {
-  id          String   @id @default(cuid())
-  heading     String
-  title       String
-  criteria    Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  heading   String
+  title     String
+  criteria  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("why_choose_contents")
 }
@@ -85,4 +85,18 @@ model ArticleContent {
   updatedAt   DateTime @updatedAt
 
   @@map("article_contents")
+}
+
+model Settings {
+  id           String   @id @default(cuid())
+  whatsapp     String   @default("+6285777578827")
+  instagram    String   @default("https://www.instagram.com/zarihoney")
+  email        String   @default("info@zarilife.com")
+  shopeeLink   String   @default("https://id.shp.ee/GgH8AKs")
+  mapsLocation String   @default("https://maps.app.goo.gl/Yfnw3MHWgm2YPEeU8")
+  mapsEmbed    String   @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("settings")
 }

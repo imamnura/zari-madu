@@ -45,7 +45,12 @@ export function ArticlesSection() {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const response = await fetch("/api/admin/articles-content");
+        const response = await fetch("/api/admin/articles-content", {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+          },
+        });
         if (response.ok) {
           const data = await response.json();
           // Only update if we have articles from the API

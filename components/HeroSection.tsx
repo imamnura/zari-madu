@@ -18,8 +18,20 @@ interface HeroData {
   productImage: string | null;
 }
 
+interface Settings {
+  whatsapp: string;
+  instagram: string;
+  email: string;
+  shopeeLink: string;
+  mapsLocation: string;
+  mapsEmbed: string;
+}
+
+type ContactSettings = Settings | typeof CONTACT_INFO;
+
 export function HeroSection() {
   const [heroData, setHeroData] = useState<HeroData | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => {
     // Fetch dynamic content from API
@@ -28,6 +40,14 @@ export function HeroSection() {
       .then((data) => setHeroData(data))
       .catch((error) => {
         console.error("Error loading hero content:", error);
+      });
+
+    // Fetch settings
+    fetch("/api/admin/settings")
+      .then((res) => res.json())
+      .then((data) => setSettings(data))
+      .catch((error) => {
+        console.error("Error fetching settings:", error);
         // Fallback to static content if API fails
         setHeroData({
           badges: HERO_CONTENT.badges,
@@ -41,16 +61,20 @@ export function HeroSection() {
       });
   }, []);
 
+  const contactInfo: ContactSettings = settings || CONTACT_INFO;
+
   const handleOrderClick = () => {
-    openWhatsApp(CONTACT_INFO.whatsapp, WHATSAPP_MESSAGES.order);
+    openWhatsApp(contactInfo.whatsapp, WHATSAPP_MESSAGES.order);
   };
 
   const handleResellerClick = () => {
-    openWhatsApp(CONTACT_INFO.whatsapp, WHATSAPP_MESSAGES.reseller);
+    openWhatsApp(contactInfo.whatsapp, WHATSAPP_MESSAGES.reseller);
   };
 
   const handleShopeeClick = () => {
-    window.open(CONTACT_INFO.shopee, "_blank");
+    const shopeeUrl =
+      "shopeeLink" in contactInfo ? contactInfo.shopeeLink : contactInfo.shopee;
+    window.open(shopeeUrl, "_blank");
   };
 
   // Show loading or fallback while data is being fetched
