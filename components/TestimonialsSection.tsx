@@ -2,17 +2,50 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { TESTIMONIALS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 
+type TestimonialData = {
+  heading: string;
+  title: string;
+  testimonials: Array<{
+    id: number;
+    name: string;
+    city: string;
+    text: string;
+    rating: number;
+  }>;
+};
+
 export function TestimonialsSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
+  const [content, setContent] = useState<TestimonialData>({
+    heading: "Apa Kata Mereka?",
+    title: "Ribuan pelanggan puas telah merasakan kualitas Zari Life",
+    testimonials: TESTIMONIALS,
+  });
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const res = await fetch("/api/admin/testimonial-content");
+        if (res.ok) {
+          const data = await res.json();
+          setContent(data);
+        }
+      } catch (error) {
+        console.error("Error fetching testimonial content:", error);
+      }
+    };
+
+    fetchContent();
+  }, []);
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -36,10 +69,10 @@ export function TestimonialsSection() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Apa Kata Mereka?
+            {content.heading}
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-            Ribuan pelanggan puas telah merasakan kualitas Zari Life
+            {content.title}
           </p>
         </motion.div>
 
@@ -52,7 +85,7 @@ export function TestimonialsSection() {
           {/* Carousel */}
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex gap-6">
-              {TESTIMONIALS.map((testimonial) => (
+              {content.testimonials.map((testimonial) => (
                 <div
                   key={testimonial.id}
                   className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_33.333%]"

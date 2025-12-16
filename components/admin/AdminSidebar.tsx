@@ -12,6 +12,7 @@ import {
   X,
   Info,
   Award,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -35,6 +36,11 @@ const menuItems = [
     label: "Why Choose",
     href: "/admin/dashboard/why-choose",
     icon: Award,
+  },
+  {
+    label: "Testimonials",
+    href: "/admin/dashboard/testimonials",
+    icon: MessageSquare,
   },
   {
     label: "Artikel",

@@ -113,6 +113,49 @@ async function main() {
   });
 
   console.log("✅ Why Choose content created");
+
+  // Create default testimonial content
+  const testimonialContent = await prisma.testimonialContent.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      heading: "Apa Kata Mereka?",
+      title: "Ribuan pelanggan puas telah merasakan kualitas Zari Life",
+      testimonials: JSON.stringify([
+        {
+          id: 1,
+          name: "Ibu Sari",
+          city: "Jakarta",
+          text: "Madu Zari benar-benar premium! Rasanya berbeda dari madu biasa. Anak-anak saya suka dan keluarga jadi lebih sehat.",
+          rating: 5,
+        },
+        {
+          id: 2,
+          name: "Bapak Rizki",
+          city: "Bandung",
+          text: "Sudah jadi reseller Zari 2 tahun. Produknya mudah dijual karena kualitasnya terjamin dan packagingnya premium.",
+          rating: 5,
+        },
+        {
+          id: 3,
+          name: "Ibu Dina",
+          city: "Surabaya",
+          text: "Cocok untuk hampers kantor. Klien-klien saya sangat puas dengan kualitas dan kemasannya yang elegan.",
+          rating: 5,
+        },
+        {
+          id: 4,
+          name: "Bapak Ahmad",
+          city: "Yogyakarta",
+          text: "Madu hutan liarnya juara! Keasliannya terasa, cocok untuk jaga stamina dan kesehatan.",
+          rating: 5,
+        },
+      ]),
+    },
+  });
+
+  console.log("✅ Testimonial content created");
 }
 
 main()
