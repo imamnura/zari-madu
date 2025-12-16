@@ -148,7 +148,7 @@ Untuk menambahkan analytics (Google Analytics, Plausible, dll):
 
 ## 📄 License
 
-© 2024 Zari Life. All rights reserved.
+© 2025 Zari Life. All rights reserved.
 
 ## 👨‍💻 Development Info
 
