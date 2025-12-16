@@ -1,0 +1,4 @@
+# This directory contains uploaded images
+# Files in this directory are ignored by git
+*
+!.gitignore

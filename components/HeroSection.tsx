@@ -8,8 +8,39 @@ import { openWhatsApp } from "@/lib/whatsapp";
 import { RunningText } from "./RunningText";
 import { Typewriter } from "./Typewriter";
 import { Sparkles, ShoppingBag } from "lucide-react";
+import { useState, useEffect } from "react";
+import Image from "next/image";
+
+interface HeroData {
+  badges: string[];
+  typewriterTexts: string[];
+  description: string;
+  productImage: string | null;
+}
 
 export function HeroSection() {
+  const [heroData, setHeroData] = useState<HeroData | null>(null);
+
+  useEffect(() => {
+    // Fetch dynamic content from API
+    fetch("/api/admin/hero-content")
+      .then((res) => res.json())
+      .then((data) => setHeroData(data))
+      .catch((error) => {
+        console.error("Error loading hero content:", error);
+        // Fallback to static content if API fails
+        setHeroData({
+          badges: HERO_CONTENT.badges,
+          typewriterTexts: [
+            "Madu Premium Asli dari Alam Indonesia",
+            "Kualitas Terpercaya - Tanpa Aditif",
+          ],
+          description: HERO_CONTENT.subheadline,
+          productImage: null,
+        });
+      });
+  }, []);
+
   const handleOrderClick = () => {
     openWhatsApp(CONTACT_INFO.whatsapp, WHATSAPP_MESSAGES.order);
   };
@@ -21,6 +52,15 @@ export function HeroSection() {
   const handleShopeeClick = () => {
     window.open(CONTACT_INFO.shopee, "_blank");
   };
+
+  // Show loading or fallback while data is being fetched
+  const badges = heroData?.badges || HERO_CONTENT.badges;
+  const typewriterTexts = heroData?.typewriterTexts || [
+    "Madu Premium Asli dari Alam Indonesia",
+    "Kualitas Terpercaya - Tanpa Aditif",
+  ];
+  const description = heroData?.description || HERO_CONTENT.subheadline;
+  const productImage = heroData?.productImage;
 
   return (
     <>
@@ -82,7 +122,7 @@ export function HeroSection() {
                 transition={{ delay: 0.2, duration: 0.6 }}
                 className="flex flex-wrap gap-2 justify-center lg:justify-start mb-6"
               >
-                {HERO_CONTENT.badges.map((badge, index) => (
+                {badges.map((badge, index) => (
                   <motion.div
                     key={index}
                     whileHover={{ scale: 1.05 }}
@@ -108,10 +148,7 @@ export function HeroSection() {
               >
                 <span className="bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 bg-clip-text text-transparent">
                   <Typewriter
-                    texts={[
-                      "Madu Premium Asli dari Alam Indonesia",
-                      "Kualitas Terpercaya - Tanpa Aditif,",
-                    ]}
+                    texts={typewriterTexts}
                     typingSpeed={80}
                     deletingSpeed={50}
                     delayBetween={2500}
@@ -126,7 +163,7 @@ export function HeroSection() {
                 transition={{ delay: 0.4, duration: 0.6 }}
                 className="text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0"
               >
-                {HERO_CONTENT.subheadline}
+                {description}
               </motion.p>
 
               {/* Enhanced CTA Buttons */}
@@ -211,19 +248,30 @@ export function HeroSection() {
                   whileHover={{ scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <div className="text-center text-white p-8 relative z-10">
-                    <motion.div
-                      animate={{ rotate: [0, 5, -5, 0] }}
-                      transition={{ duration: 3, repeat: Infinity }}
-                      className="text-8xl mb-4"
-                    >
-                      🍯
-                    </motion.div>
-                    <p className="text-2xl font-bold">Zari Premium Honey</p>
-                    <p className="text-sm mt-2 opacity-90">
-                      100% Murni & Natural
-                    </p>
-                  </div>
+                  {productImage ? (
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={productImage}
+                        alt="Zari Premium Honey"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-center text-white p-8 relative z-10">
+                      <motion.div
+                        animate={{ rotate: [0, 5, -5, 0] }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                        className="text-8xl mb-4"
+                      >
+                        🍯
+                      </motion.div>
+                      <p className="text-2xl font-bold">Zari Premium Honey</p>
+                      <p className="text-sm mt-2 opacity-90">
+                        100% Murni & Natural
+                      </p>
+                    </div>
+                  )}
 
                   {/* Decorative pattern overlay */}
                   <div className="absolute inset-0 opacity-10">
