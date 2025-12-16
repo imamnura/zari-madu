@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Plus, Upload, Loader2, Save, Eye } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "sonner";
 
 const heroSchema = z.object({
   badges: z.array(z.string()).min(1, "Minimal 1 badge diperlukan"),
@@ -23,10 +24,6 @@ type HeroFormData = z.infer<typeof heroSchema>;
 export default function HeroContentPage() {
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
   const [badges, setBadges] = useState<string[]>([]);
   const [badgeInput, setBadgeInput] = useState("");
   const [typewriterTexts, setTypewriterTexts] = useState<string[]>([]);
@@ -122,7 +119,7 @@ export default function HeroContentPage() {
   const handleDeleteImage = () => {
     setValue("productImage", null);
     setPreviewImage(null);
-    setMessage({ type: "success", text: "Gambar berhasil dihapus" });
+    toast.success("Gambar berhasil dihapus");
   };
 
   // Check if form is valid for submission
@@ -135,21 +132,17 @@ export default function HeroContentPage() {
 
     // Validate file size (1MB)
     if (file.size > 1 * 1024 * 1024) {
-      setMessage({ type: "error", text: "Ukuran file maksimal 1MB" });
+      toast.error("Ukuran file maksimal 1MB");
       return;
     }
 
     // Validate file type
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setMessage({
-        type: "error",
-        text: "Format file harus JPEG, PNG, atau WebP",
-      });
+      toast.error("Format file harus JPEG, PNG, atau WebP");
       return;
     }
 
     setUploadingImage(true);
-    setMessage(null);
 
     try {
       const formData = new FormData();
@@ -165,15 +158,12 @@ export default function HeroContentPage() {
       if (res.ok) {
         setValue("productImage", data.url);
         setPreviewImage(data.url);
-        setMessage({ type: "success", text: "Gambar berhasil diupload" });
+        toast.success("Gambar berhasil diupload");
       } else {
-        setMessage({
-          type: "error",
-          text: data.error || "Gagal upload gambar",
-        });
+        toast.error(data.error || "Gagal upload gambar");
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Gagal upload gambar" });
+      toast.error("Gagal upload gambar");
     } finally {
       setUploadingImage(false);
     }
@@ -182,7 +172,6 @@ export default function HeroContentPage() {
   // Submit form
   const onSubmit = async (data: HeroFormData) => {
     setLoading(true);
-    setMessage(null);
 
     try {
       const res = await fetch("/api/admin/hero-content", {
@@ -194,18 +183,12 @@ export default function HeroContentPage() {
       const result = await res.json();
 
       if (res.ok) {
-        setMessage({ type: "success", text: "Data berhasil disimpan!" });
+        toast.success("Data berhasil disimpan!");
       } else {
-        setMessage({
-          type: "error",
-          text: result.error || "Gagal menyimpan data",
-        });
+        toast.error(result.error || "Gagal menyimpan data");
       }
     } catch (error) {
-      setMessage({
-        type: "error",
-        text: "Terjadi kesalahan. Silakan coba lagi.",
-      });
+      toast.error("Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setLoading(false);
     }
@@ -229,18 +212,6 @@ export default function HeroContentPage() {
           </Button>
         </Link>
       </div>
-
-      {message && (
-        <div
-          className={`p-3 sm:p-4 rounded-lg text-sm sm:text-base ${
-            message.type === "success"
-              ? "bg-green-50 border border-green-200 text-green-700"
-              : "bg-red-50 border border-red-200 text-red-700"
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Badges */}

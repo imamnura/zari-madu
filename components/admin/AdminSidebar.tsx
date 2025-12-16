@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Info,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -23,6 +24,11 @@ const menuItems = [
     label: "Hero Section",
     href: "/admin/dashboard/hero",
     icon: Home,
+  },
+  {
+    label: "About Section",
+    href: "/admin/dashboard/about",
+    icon: Info,
   },
   {
     label: "Artikel",

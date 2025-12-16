@@ -2,7 +2,7 @@
 
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { ABOUT_CONTENT } from "@/lib/constants";
 import { TrendingUp } from "lucide-react";
 
@@ -26,9 +26,40 @@ function Counter({ value, isInView }: { value: string; isInView: boolean }) {
   return <span>{value}</span>;
 }
 
+interface AboutData {
+  tagline: string;
+  heading: string;
+  body: string;
+  stats: Array<{ value: string; label: string }>;
+}
+
 export function AboutSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const [aboutData, setAboutData] = useState<AboutData | null>(null);
+
+  useEffect(() => {
+    // Fetch dynamic content from API
+    fetch("/api/admin/about-content")
+      .then((res) => res.json())
+      .then((data) => setAboutData(data))
+      .catch((error) => {
+        console.error("Error loading about content:", error);
+        // Fallback to static content if API fails
+        setAboutData({
+          tagline: "Terpercaya & Berkualitas",
+          heading: ABOUT_CONTENT.heading,
+          body: ABOUT_CONTENT.body,
+          stats: ABOUT_CONTENT.stats,
+        });
+      });
+  }, []);
+
+  // Use dynamic data or fallback to static
+  const tagline = aboutData?.tagline || "Terpercaya & Berkualitas";
+  const heading = aboutData?.heading || ABOUT_CONTENT.heading;
+  const body = aboutData?.body || ABOUT_CONTENT.body;
+  const stats = aboutData?.stats || ABOUT_CONTENT.stats;
 
   return (
     <section
@@ -45,9 +76,7 @@ export function AboutSection() {
             className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full mb-6"
           >
             <TrendingUp className="w-4 h-4" />
-            <span className="text-sm font-semibold">
-              Terpercaya & Berkualitas
-            </span>
+            <span className="text-sm font-semibold">{tagline}</span>
           </motion.div>
 
           <motion.h2
@@ -57,7 +86,7 @@ export function AboutSection() {
             className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6"
           >
             <span className="bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 bg-clip-text text-transparent">
-              {ABOUT_CONTENT.heading}
+              {heading}
             </span>
           </motion.h2>
           <motion.p
@@ -66,13 +95,13 @@ export function AboutSection() {
             transition={{ delay: 0.2, duration: 0.6 }}
             className="text-lg sm:text-xl text-gray-600 leading-relaxed"
           >
-            {ABOUT_CONTENT.body}
+            {body}
           </motion.p>
         </div>
 
         {/* Enhanced Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {ABOUT_CONTENT.stats.map((stat, index) => (
+          {stats.map((stat, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, scale: 0.5 }}

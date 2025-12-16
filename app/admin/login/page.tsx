@@ -6,17 +6,16 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LogIn, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
     try {
@@ -27,13 +26,14 @@ export default function AdminLoginPage() {
       });
 
       if (result?.error) {
-        setError(result.error);
+        toast.error(result.error);
       } else {
+        toast.success("Login berhasil!");
         router.push("/admin/dashboard");
         router.refresh();
       }
     } catch (error) {
-      setError("Terjadi kesalahan. Silakan coba lagi.");
+      toast.error("Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setLoading(false);
     }
@@ -50,12 +50,6 @@ export default function AdminLoginPage() {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
-
             <div className="space-y-2">
               <label
                 htmlFor="email"

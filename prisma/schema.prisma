@@ -29,3 +29,15 @@ model HeroContent {
 
   @@map("hero_contents")
 }
+
+model AboutContent {
+  id          String   @id @default(cuid())
+  tagline     String
+  heading     String
+  body        String   @db.Text
+  stats       Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("about_contents")
+}

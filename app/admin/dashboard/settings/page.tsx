@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Save, Lock } from "lucide-react";
+import { toast } from "sonner";
 
 const passwordSchema = z
   .object({
@@ -23,10 +24,6 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   const {
     register,
@@ -39,7 +36,6 @@ export default function SettingsPage() {
 
   const onSubmit = async (data: PasswordFormData) => {
     setLoading(true);
-    setMessage(null);
 
     try {
       const res = await fetch("/api/admin/change-password", {
@@ -51,19 +47,13 @@ export default function SettingsPage() {
       const result = await res.json();
 
       if (res.ok) {
-        setMessage({ type: "success", text: "Password berhasil diubah!" });
+        toast.success("Password berhasil diubah!");
         reset();
       } else {
-        setMessage({
-          type: "error",
-          text: result.error || "Gagal mengubah password",
-        });
+        toast.error(result.error || "Gagal mengubah password");
       }
     } catch (error) {
-      setMessage({
-        type: "error",
-        text: "Terjadi kesalahan. Silakan coba lagi.",
-      });
+      toast.error("Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setLoading(false);
     }
@@ -77,18 +67,6 @@ export default function SettingsPage() {
         </h1>
         <p className="text-gray-600">Kelola akun dan keamanan Anda</p>
       </div>
-
-      {message && (
-        <div
-          className={`p-4 rounded-lg ${
-            message.type === "success"
-              ? "bg-green-50 border border-green-200 text-green-700"
-              : "bg-red-50 border border-red-200 text-red-700"
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <Card className="border-2">
