@@ -44,7 +44,7 @@ export function Footer() {
           {/* Left: Brand & Contact */}
           <div>
             <h3 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent mb-8">
-              Zari Life
+              Zari Honey
             </h3>
 
             <div className="space-y-4">
@@ -108,7 +108,7 @@ export function Footer() {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Lokasi Zari Life"
+                title="Lokasi Zari Honey"
               />
             </div>
           </div>
@@ -117,7 +117,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-gray-800 mt-12 pt-8">
           <p className="text-center text-gray-400 text-sm">
-            © 2025 Zari Life. All rights reserved.
+            © 2025 Zari Honey. All rights reserved.
           </p>
         </div>
       </div>

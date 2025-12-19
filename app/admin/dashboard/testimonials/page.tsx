@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { X, Plus, Loader2, Save, Eye, Star } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import {
+  ConfirmDialog,
+  useConfirmDialog,
+} from "@/components/ui/confirm-dialog";
 
 type Testimonial = {
   id: number;
@@ -44,6 +48,7 @@ export default function TestimonialsContentPage() {
   const [textInput, setTextInput] = useState("");
   const [ratingInput, setRatingInput] = useState(5);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const { isOpen, openDialog, closeDialog, dialogProps } = useConfirmDialog();
 
   const {
     register,
@@ -136,8 +141,16 @@ export default function TestimonialsContentPage() {
 
   // Delete testimonial
   const handleDeleteTestimonial = (index: number) => {
-    setTestimonials(testimonials.filter((_, i) => i !== index));
-    toast.success("Testimoni berhasil dihapus");
+    openDialog({
+      title: "Hapus Testimoni",
+      description:
+        "Apakah Anda yakin ingin menghapus testimoni ini? Data yang dihapus tidak dapat dikembalikan.",
+      confirmText: "Ya, Hapus",
+      onConfirm: () => {
+        setTestimonials(testimonials.filter((_, i) => i !== index));
+        toast.success("Testimoni berhasil dihapus");
+      },
+    });
   };
 
   // Cancel edit
@@ -245,7 +258,7 @@ export default function TestimonialsContentPage() {
               <input
                 type="text"
                 {...register("title")}
-                placeholder="Contoh: Ribuan pelanggan puas telah merasakan kualitas Zari Life"
+                placeholder="Contoh: Ribuan pelanggan puas telah merasakan kualitas Zari Honey"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
               />
               {errors.title && (
@@ -488,6 +501,16 @@ export default function TestimonialsContentPage() {
           </Button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={isOpen}
+        onOpenChange={closeDialog}
+        onConfirm={dialogProps.onConfirm}
+        title={dialogProps.title}
+        description={dialogProps.description}
+        confirmText={dialogProps.confirmText}
+        cancelText={dialogProps.cancelText}
+      />
     </div>
   );
 }

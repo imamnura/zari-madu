@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { X, Plus, Loader2, Save, Eye } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import {
+  ConfirmDialog,
+  useConfirmDialog,
+} from "@/components/ui/confirm-dialog";
 
 // Icon options for selection
 const ICON_OPTIONS = [
@@ -51,6 +55,7 @@ export default function WhyChooseContentPage() {
   const [titleInput, setTitleInput] = useState("");
   const [descriptionInput, setDescriptionInput] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const { isOpen, openDialog, closeDialog, dialogProps } = useConfirmDialog();
 
   const {
     register,
@@ -139,8 +144,16 @@ export default function WhyChooseContentPage() {
 
   // Delete criterion
   const handleDeleteCriterion = (index: number) => {
-    setCriteria(criteria.filter((_, i) => i !== index));
-    toast.success("Kriteria berhasil dihapus");
+    openDialog({
+      title: "Hapus Kriteria",
+      description:
+        "Apakah Anda yakin ingin menghapus kriteria ini? Data yang dihapus tidak dapat dikembalikan.",
+      confirmText: "Ya, Hapus",
+      onConfirm: () => {
+        setCriteria(criteria.filter((_, i) => i !== index));
+        toast.success("Kriteria berhasil dihapus");
+      },
+    });
   };
 
   // Cancel edit
@@ -190,7 +203,7 @@ export default function WhyChooseContentPage() {
             Kelola Why Choose Section
           </h1>
           <p className="text-sm sm:text-base text-gray-600">
-            Manajemen konten mengapa memilih Zari Life
+            Manajemen konten mengapa memilih Zari Honey
           </p>
         </div>
 
@@ -219,7 +232,7 @@ export default function WhyChooseContentPage() {
               <input
                 type="text"
                 {...register("heading")}
-                placeholder="Contoh: Mengapa Memilih Zari Life?"
+                placeholder="Contoh: Mengapa Memilih Zari Honey?"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
               />
               {errors.heading && (
@@ -264,7 +277,7 @@ export default function WhyChooseContentPage() {
           <CardHeader>
             <h3 className="font-bold text-lg">Kriteria</h3>
             <p className="text-sm text-gray-600">
-              Kelola alasan mengapa memilih Zari Life (minimal 1)
+              Kelola alasan mengapa memilih Zari Honey (minimal 1)
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -459,6 +472,16 @@ export default function WhyChooseContentPage() {
           </Button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={isOpen}
+        onOpenChange={closeDialog}
+        onConfirm={dialogProps.onConfirm}
+        title={dialogProps.title}
+        description={dialogProps.description}
+        confirmText={dialogProps.confirmText}
+        cancelText={dialogProps.cancelText}
+      />
     </div>
   );
 }

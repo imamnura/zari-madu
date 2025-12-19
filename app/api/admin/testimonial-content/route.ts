@@ -28,7 +28,7 @@ export async function GET() {
   };
 
   try {
-    let content = await prisma.testimonialContent.findFirst({
+    const content = await prisma.testimonialContent.findFirst({
       orderBy: { updatedAt: "desc" },
     });
 
@@ -37,7 +37,7 @@ export async function GET() {
       return NextResponse.json(
         {
           heading: "Apa Kata Mereka?",
-          title: "Ribuan pelanggan puas telah merasakan kualitas Zari Life",
+          title: "Ribuan pelanggan puas telah merasakan kualitas Zari Honey",
           testimonials: [
             {
               id: 1,

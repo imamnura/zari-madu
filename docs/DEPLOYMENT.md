@@ -1,4 +1,4 @@
-# Panduan Deployment Zari Life Landing Page
+# Panduan Deployment Zari Honey Landing Page
 
 ## 🚀 Deployment ke Vercel (Recommended)
 

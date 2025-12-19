@@ -1,4 +1,4 @@
-// Constants and static content for Zari Life landing page
+// Constants and static content for Zari Honey landing page
 
 export const CONTACT_INFO = {
   whatsapp: "+6285777578827",
@@ -34,8 +34,8 @@ export const HERO_CONTENT = {
 };
 
 export const ABOUT_CONTENT = {
-  heading: "Tentang Zari Life",
-  body: "Zari Life hadir dengan komitmen menghadirkan madu dan hasil alam Indonesia yang premium, murni, dan berkualitas tinggi. Kami bekerja langsung dengan peternak lokal terpilih untuk memastikan setiap produk memenuhi standar kualitas tertinggi.",
+  heading: "Tentang Zari Honey",
+  body: "Zari Honey hadir dengan komitmen menghadirkan madu dan hasil alam Indonesia yang premium, murni, dan berkualitas tinggi. Kami bekerja langsung dengan peternak lokal terpilih untuk memastikan setiap produk memenuhi standar kualitas tertinggi.",
   stats: [
     { value: "1M+", label: "Pelanggan Puas" },
     { value: "100%", label: "Madu Murni" },
@@ -387,7 +387,7 @@ export const ARTICLES = [
       <h3>10. Kaya Nutrisi Penting</h3>
       <p>Madu mengandung berbagai vitamin seperti B kompleks, vitamin C, serta mineral seperti kalsium, zat besi, zinc, dan magnesium.</p>
       
-      <p><strong>Kesimpulan:</strong> Madu adalah superfood alami yang memberikan banyak manfaat kesehatan. Pilih madu murni berkualitas tinggi seperti produk Zari Life untuk mendapatkan manfaat maksimal.</p>
+      <p><strong>Kesimpulan:</strong> Madu adalah superfood alami yang memberikan banyak manfaat kesehatan. Pilih madu murni berkualitas tinggi seperti produk Zari Honey untuk mendapatkan manfaat maksimal.</p>
     `,
     tags: ["kesehatan", "madu", "nutrisi"],
   },
@@ -399,7 +399,7 @@ export const ARTICLES = [
       "Tips praktis untuk mengidentifikasi madu murni dan menghindari produk palsu di pasaran.",
     image: "/images/articles/madu-asli.jpg",
     category: "Tips",
-    author: "Tim Zari Life",
+    author: "Tim Zari Honey",
     date: "8 Desember 2025",
     readTime: "4 min",
     content: `
@@ -434,7 +434,7 @@ export const ARTICLES = [
       <p>Waspada dengan harga yang terlalu murah. Madu asli memerlukan proses produksi yang tidak mudah dan sumber nektar berkualitas, sehingga harganya tidak akan terlalu murah.</p>
       
       <h3>10. Beli dari Sumber Terpercaya</h3>
-      <p>Cara terbaik adalah membeli dari produsen atau brand terpercaya yang memiliki reputasi baik dan transparansi dalam proses produksi, seperti Zari Life.</p>
+      <p>Cara terbaik adalah membeli dari produsen atau brand terpercaya yang memiliki reputasi baik dan transparansi dalam proses produksi, seperti Zari Honey.</p>
       
       <p><strong>Kesimpulan:</strong> Dengan mengetahui cara-cara di atas, Anda dapat lebih mudah membedakan madu asli dan palsu. Selalu pilih madu yang telah tersertifikasi dan dari sumber terpercaya untuk mendapatkan manfaat kesehatan yang maksimal.</p>
     `,
@@ -515,24 +515,24 @@ export const ARTICLES = [
         <li>Sesuaikan takaran madu dengan selera manis Anda</li>
       </ul>
       
-      <p><strong>Kesimpulan:</strong> Kelima resep minuman sehat ini mudah dibuat dan memberikan manfaat luar biasa untuk kesehatan keluarga. Pastikan menggunakan madu murni seperti produk Zari Life untuk mendapatkan khasiat maksimal.</p>
+      <p><strong>Kesimpulan:</strong> Kelima resep minuman sehat ini mudah dibuat dan memberikan manfaat luar biasa untuk kesehatan keluarga. Pastikan menggunakan madu murni seperti produk Zari Honey untuk mendapatkan khasiat maksimal.</p>
     `,
     tags: ["resep", "minuman", "imunitas"],
   },
   {
     id: 4,
     slug: "proses-produksi-madu-zari-life",
-    title: "Di Balik Layar: Proses Produksi Madu Zari Life",
+    title: "Di Balik Layar: Proses Produksi Madu Zari Honey",
     excerpt:
       "Ikuti perjalanan madu dari sarang lebah hingga botol premium di tangan Anda.",
     image: "/images/articles/produksi.jpg",
     category: "Behind The Scene",
-    author: "Tim Zari Life",
+    author: "Tim Zari Honey",
     date: "1 Desember 2025",
     readTime: "7 min",
     content: `
       <h2>Dari Hutan ke Meja Anda</h2>
-      <p>Setiap botol madu Zari Life melalui proses yang ketat dan penuh perhatian untuk memastikan kualitas premium sampai ke tangan Anda. Mari kita telusuri perjalanan madu dari sarang lebah hingga botol premium di rumah Anda.</p>
+      <p>Setiap botol madu Zari Honey melalui proses yang ketat dan penuh perhatian untuk memastikan kualitas premium sampai ke tangan Anda. Mari kita telusuri perjalanan madu dari sarang lebah hingga botol premium di rumah Anda.</p>
       
       <h3>1. Pemilihan Lokasi Panen</h3>
       <p>Kami bekerja sama dengan peternak lebah lokal terpilih di berbagai wilayah Indonesia. Lokasi dipilih berdasarkan kualitas flora, jauh dari polusi, dan memiliki sumber nektar yang berlimpah. Setiap lokasi disurvei secara berkala untuk memastikan kondisi optimal.</p>
@@ -565,7 +565,7 @@ export const ARTICLES = [
       <p>Madu disimpan di gudang dengan suhu dan kelembaban terkontrol. Proses pengiriman dilakukan dengan cepat dan aman untuk memastikan produk sampai dalam kondisi prima.</p>
       
       <h3>Komitmen Kami</h3>
-      <p>Zari Life berkomitmen untuk:</p>
+      <p>Zari Honey berkomitmen untuk:</p>
       <ul>
         <li>100% madu murni tanpa campuran</li>
         <li>Tidak menggunakan pemanasan tinggi</li>
@@ -574,7 +574,7 @@ export const ARTICLES = [
         <li>Ramah lingkungan dan berkelanjutan</li>
       </ul>
       
-      <p><strong>Kesimpulan:</strong> Proses panjang dan penuh dedikasi inilah yang membuat madu Zari Life berbeda. Kami tidak mengambil jalan pintas karena kualitas dan kepuasan Anda adalah prioritas utama kami. Setiap tetes madu adalah hasil dari kerja keras dan komitmen kami terhadap kualitas premium.</p>
+      <p><strong>Kesimpulan:</strong> Proses panjang dan penuh dedikasi inilah yang membuat madu Zari Honey berbeda. Kami tidak mengambil jalan pintas karena kualitas dan kepuasan Anda adalah prioritas utama kami. Setiap tetes madu adalah hasil dari kerja keras dan komitmen kami terhadap kualitas premium.</p>
     `,
     tags: ["produksi", "kualitas", "behind the scene"],
   },
@@ -582,16 +582,16 @@ export const ARTICLES = [
 
 export const CTA_SECTION = {
   heading: "Rasakan Kemurnian Madu Premium Hari Ini",
-  body: "Bergabunglah dengan ribuan keluarga Indonesia yang telah merasakan manfaat madu murni Zari Life. Pesan sekarang atau jadilah mitra reseller kami.",
+  body: "Bergabunglah dengan ribuan keluarga Indonesia yang telah merasakan manfaat madu murni Zari Honey. Pesan sekarang atau jadilah mitra reseller kami.",
 };
 
 export const FOOTER_CONTENT = {
-  tagline: "Zari Life - Kemurnian Alam, Kualitas Premium",
-  copyright: `© ${new Date().getFullYear()} Zari Life. All rights reserved.`,
+  tagline: "Zari Honey - Kemurnian Alam, Kualitas Premium",
+  copyright: `© ${new Date().getFullYear()} Zari Honey. All rights reserved.`,
 };
 
 export const SEO_CONTENT = {
-  title: "Zari Life - Madu Premium Asli Indonesia | 100% Murni & Natural",
+  title: "Zari Honey - Madu Premium Asli Indonesia | 100% Murni & Natural",
   description:
     "Madu premium berkualitas tinggi dari alam Indonesia. 100% murni, single-origin, tersertifikasi lab. Pesan sekarang atau bergabung menjadi reseller premium.",
   ogImage: "/og-image.jpg",

@@ -66,7 +66,7 @@ export default function TiptapEditor({
       }),
       Image.configure({
         inline: true,
-        allowBase64: true,
+        allowBase64: false, // Disable base64, use Cloudinary instead
         HTMLAttributes: {
           class: "max-w-full h-auto rounded-lg",
         },
@@ -127,10 +127,77 @@ export default function TiptapEditor({
 
   // Helper functions
   const addImage = () => {
-    const url = window.prompt("Masukkan URL gambar:");
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        // Validate file size (10MB max)
+        if (file.size > 10 * 1024 * 1024) {
+          alert("File terlalu besar. Maksimal 10MB.");
+          return;
+        }
+
+        // Show loading placeholder
+        const loadingId = `loading-${Date.now()}`;
+        editor
+          .chain()
+          .focus()
+          .insertContent(`<p id="${loadingId}">⏳ Uploading image...</p>`)
+          .run();
+
+        // Upload to Cloudinary
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", "zari-honey/articles");
+
+        const response = await fetch("/api/admin/cloudinary-upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("Upload failed");
+        }
+
+        const data = await response.json();
+
+        // Remove loading text and insert image
+        const { state } = editor;
+        const loadingNode = state.doc.textBetween(
+          0,
+          state.doc.content.size,
+          "\n"
+        );
+        const loadingPos = loadingNode.indexOf("⏳ Uploading image...");
+
+        if (loadingPos !== -1) {
+          editor.commands.deleteRange({
+            from: loadingPos,
+            to: loadingPos + 22,
+          });
+        }
+
+        // Insert the image
+        editor
+          .chain()
+          .focus()
+          .setImage({
+            src: data.url,
+            alt: file.name,
+          })
+          .run();
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        alert("Gagal upload gambar. Silakan coba lagi.");
+      }
+    };
+
+    input.click();
   };
 
   const addLink = () => {

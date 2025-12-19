@@ -4,8 +4,12 @@ import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
 import { useRef, useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { CTA_SECTION, CONTACT_INFO, WHATSAPP_MESSAGES } from "@/lib/constants";
+import { CTA_SECTION } from "@/lib/constants";
 import { openWhatsApp } from "@/lib/whatsapp";
+import {
+  trackWhatsAppClick,
+  trackShopeeClick,
+} from "@/components/GoogleAnalytics";
 import { MessageCircle, Sparkles, ShoppingBag } from "lucide-react";
 
 interface Settings {
@@ -15,9 +19,11 @@ interface Settings {
   shopeeLink: string;
   mapsLocation: string;
   mapsEmbed: string;
+  whatsappOrderMessage?: string;
+  whatsappResellerMessage?: string;
 }
 
-type ContactSettings = Settings | typeof CONTACT_INFO;
+type ContactSettings = Settings;
 
 export function CTASection() {
   const ref = useRef(null);
@@ -40,8 +46,6 @@ export function CTASection() {
     fetchSettings();
   }, []);
 
-  const contactInfo: ContactSettings = settings || CONTACT_INFO;
-
   const particles = useMemo(
     () =>
       [...Array(10)].map((_, i) => ({
@@ -54,17 +58,30 @@ export function CTASection() {
   );
 
   const handleOrderClick = () => {
-    openWhatsApp(contactInfo.whatsapp, WHATSAPP_MESSAGES.order);
+    if (settings) {
+      const message =
+        settings.whatsappOrderMessage ||
+        "Halo Zari, saya tertarik memesan madu premium. Mohon info detail & harganya.";
+      trackWhatsAppClick("order");
+      openWhatsApp(settings.whatsapp, message);
+    }
   };
 
   const handleResellerClick = () => {
-    openWhatsApp(contactInfo.whatsapp, WHATSAPP_MESSAGES.reseller);
+    if (settings) {
+      const message =
+        settings.whatsappResellerMessage ||
+        "Halo Zari, saya tertarik menjadi reseller premium. Mohon informasi lebih lanjut.";
+      trackWhatsAppClick("reseller");
+      openWhatsApp(settings.whatsapp, message);
+    }
   };
 
   const handleShopeeClick = () => {
-    const shopeeUrl =
-      "shopeeLink" in contactInfo ? contactInfo.shopeeLink : contactInfo.shopee;
-    window.open(shopeeUrl, "_blank");
+    if (settings) {
+      trackShopeeClick();
+      window.open(settings.shopeeLink, "_blank");
+    }
   };
 
   return (

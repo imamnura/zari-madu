@@ -138,7 +138,7 @@ export default async function ArticleDetailPage({
             </h3>
             <p className="text-gray-700 mb-6">
               Dapatkan manfaat kesehatan maksimal dengan madu murni 100% dari
-              Zari Life
+              Zari Honey
             </p>
             <Link href="/#products">
               <Button

@@ -46,8 +46,8 @@ export const WHATSAPP_MESSAGES = {
 
 ```typescript
 export const ABOUT_CONTENT = {
-  heading: "Tentang Zari Life", // ← Edit heading
-  body: "Zari Life hadir dengan komitmen...", // ← Edit deskripsi brand
+  heading: "Tentang Zari Honey", // ← Edit heading
+  body: "Zari Honey hadir dengan komitmen...", // ← Edit deskripsi brand
   stats: [
     { value: "1M+", label: "Pelanggan Puas" }, // ← Edit stats
     { value: "100%", label: "Madu Murni" },
@@ -168,8 +168,8 @@ export const CTA_SECTION = {
 
 ```typescript
 export const FOOTER_CONTENT = {
-  tagline: "Zari Life - Kemurnian Alam, Kualitas Premium", // ← Edit tagline
-  copyright: `© ${new Date().getFullYear()} Zari Life. All rights reserved.`,
+  tagline: "Zari Honey - Kemurnian Alam, Kualitas Premium", // ← Edit tagline
+  copyright: `© ${new Date().getFullYear()} Zari Honey. All rights reserved.`,
 };
 ```
 
@@ -179,7 +179,7 @@ export const FOOTER_CONTENT = {
 
 ```typescript
 export const SEO_CONTENT = {
-  title: "Zari Life - Madu Premium Asli Indonesia | 100% Murni & Natural", // ← Edit title (max 60 char)
+  title: "Zari Honey - Madu Premium Asli Indonesia | 100% Murni & Natural", // ← Edit title (max 60 char)
   description: "Madu premium berkualitas tinggi dari alam Indonesia...", // ← Edit description (max 160 char)
   ogImage: "/og-image.jpg", // ← Path Open Graph image untuk social media preview
 };

@@ -1,4 +1,4 @@
-# 🚀 Quick Start - Admin Dashboard Zari Life
+# 🚀 Quick Start - Admin Dashboard Zari Honey
 
 ## Setup Cepat (5 Menit)
 

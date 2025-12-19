@@ -16,6 +16,7 @@ const navigation = [
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [siteName, setSiteName] = useState("Zari Honey");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +24,22 @@ export function Header() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const fetchSiteName = async () => {
+      try {
+        const response = await fetch("/api/admin/settings");
+        const data = await response.json();
+        if (data.siteName) {
+          setSiteName(data.siteName);
+        }
+      } catch (error) {
+        console.error("Error fetching site name:", error);
+      }
+    };
+
+    fetchSiteName();
   }, []);
 
   const scrollToTop = () => {
@@ -60,7 +77,7 @@ export function Header() {
               className="-m-1.5 p-1.5 cursor-pointer hover:opacity-80 transition-opacity"
             >
               <span className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-amber-600 to-amber-800 bg-clip-text text-transparent">
-                Zari Life
+                {siteName}
               </span>
             </button>
           </div>

@@ -16,6 +16,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "5.22.0",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@tiptap/extension-color": "^3.13.0",
     "@tiptap/extension-highlight": "^3.13.0",
@@ -31,6 +32,7 @@
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.8.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
@@ -39,6 +41,7 @@
     "mysql2": "^3.15.3",
     "next": "16.0.10",
     "next-auth": "^5.0.0-beta.30",
+    "next-cloudinary": "^6.17.5",
     "prisma": "5.22.0",
     "react": "19.2.1",
     "react-dom": "19.2.1",

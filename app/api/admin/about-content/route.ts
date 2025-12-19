@@ -30,8 +30,8 @@ export async function GET() {
         data: {
           id: "default",
           tagline: "Terpercaya & Berkualitas",
-          heading: "Tentang Zari Life",
-          body: "Zari Life hadir dengan komitmen menghadirkan madu dan hasil alam Indonesia yang premium, murni, dan berkualitas tinggi. Kami bekerja langsung dengan peternak lokal terpilih untuk memastikan setiap produk memenuhi standar kualitas tertinggi.",
+          heading: "Tentang Zari Honey",
+          body: "Zari Honey hadir dengan komitmen menghadirkan madu dan hasil alam Indonesia yang premium, murni, dan berkualitas tinggi. Kami bekerja langsung dengan peternak lokal terpilih untuk memastikan setiap produk memenuhi standar kualitas tertinggi.",
           stats: JSON.stringify([
             { value: "1M+", label: "Pelanggan Puas" },
             { value: "100%", label: "Madu Murni" },

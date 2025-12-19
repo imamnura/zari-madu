@@ -1,8 +1,8 @@
-# 🍯 Zari Life - Admin Dashboard Documentation
+# 🍯 Zari Honey - Admin Dashboard Documentation
 
 ## 📋 Overview
 
-Admin Dashboard telah berhasil diimplementasikan untuk mengelola konten Landing Page Zari Life secara dinamis. Semua konten Hero Section kini dapat diubah melalui antarmuka admin tanpa perlu edit kode.
+Admin Dashboard telah berhasil diimplementasikan untuk mengelola konten Landing Page Zari Honey secara dinamis. Semua konten Hero Section kini dapat diubah melalui antarmuka admin tanpa perlu edit kode.
 
 ## ✅ Fitur yang Telah Diimplementasikan
 

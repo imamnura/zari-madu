@@ -14,6 +14,7 @@ import {
   Award,
   MessageSquare,
   Handshake,
+  Droplet,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -32,6 +33,11 @@ const menuItems = [
     label: "About Section",
     href: "/admin/dashboard/about",
     icon: Info,
+  },
+  {
+    label: "Koleksi Madu",
+    href: "/admin/dashboard/honey-collection",
+    icon: Droplet,
   },
   {
     label: "Why Choose",
@@ -114,7 +120,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             {isExpanded && (
               <div className="overflow-hidden">
                 <h1 className="font-bold text-gray-900 whitespace-nowrap">
-                  Zari Life
+                  Zari Honey
                 </h1>
                 <p className="text-xs text-gray-500 whitespace-nowrap">
                   Admin Panel
@@ -188,7 +194,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           {isExpanded && (
             <div className="px-6 py-4 border-t border-gray-200">
               <p className="text-xs text-gray-500 text-center">
-                © {new Date().getFullYear()} Zari Life
+                © {new Date().getFullYear()} Zari Honey
               </p>
             </div>
           )}

@@ -1,6 +1,6 @@
-# Zari Life - Landing Page Premium
+# Zari Honey - Landing Page Premium
 
-Landing page modern dan responsive untuk Zari Life, brand madu premium Indonesia.
+Landing page modern dan responsive untuk Zari Honey, brand madu premium Indonesia.
 
 ## 🚀 Fitur Utama
 
@@ -148,7 +148,7 @@ Untuk menambahkan analytics (Google Analytics, Plausible, dll):
 
 ## 📄 License
 
-© 2025 Zari Life. All rights reserved.
+© 2025 Zari Honey. All rights reserved.
 
 ## 👨‍💻 Development Info
 

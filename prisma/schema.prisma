@@ -89,14 +89,41 @@ model ArticleContent {
 
 model Settings {
   id           String   @id @default(cuid())
+  siteName     String   @default("Zari Honey")
   whatsapp     String   @default("+6285777578827")
   instagram    String   @default("https://www.instagram.com/zarihoney")
   email        String   @default("info@zarilife.com")
   shopeeLink   String   @default("https://id.shp.ee/GgH8AKs")
   mapsLocation String   @default("https://maps.app.goo.gl/Yfnw3MHWgm2YPEeU8")
   mapsEmbed    String   @db.Text
+  whatsappOrderMessage String? @db.Text
+  whatsappResellerMessage String? @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@map("settings")
+}
+
+model PremiumHoneyCollection {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @db.Text
+  price       String?
+  image       String?  @db.LongText
+  label       String?
+  features    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("premium_honey_collections")
+}
+
+model HoneyCollectionContent {
+  id          String   @id @default(cuid())
+  title       String   @default("Koleksi Madu Premium")
+  description String   @default("Pilihan terbaik dari berbagai sumber nektar pilihan Indonesia")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("honey_collection_contents")
 }

@@ -19,6 +19,10 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import Image from "next/image";
+import {
+  ConfirmDialog,
+  useConfirmDialog,
+} from "@/components/ui/confirm-dialog";
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -69,6 +73,7 @@ export default function PartnershipsContentPage() {
   const [descriptionInput, setDescriptionInput] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [showUploadInfo, setShowUploadInfo] = useState(false);
+  const { isOpen, openDialog, closeDialog, dialogProps } = useConfirmDialog();
 
   // Debounced logo URL for preview
   const debouncedLogoUrl = useDebounce(logoInput, 500);
@@ -152,8 +157,16 @@ export default function PartnershipsContentPage() {
   };
 
   const handleDeletePartnership = (index: number) => {
-    setPartnerships(partnerships.filter((_, i) => i !== index));
-    toast.success("Partner berhasil dihapus");
+    openDialog({
+      title: "Hapus Partner",
+      description:
+        "Apakah Anda yakin ingin menghapus partner ini? Data yang dihapus tidak dapat dikembalikan.",
+      confirmText: "Ya, Hapus",
+      onConfirm: () => {
+        setPartnerships(partnerships.filter((_, i) => i !== index));
+        toast.success("Partner berhasil dihapus");
+      },
+    });
   };
 
   const handleCancelEdit = () => {
@@ -537,6 +550,16 @@ export default function PartnershipsContentPage() {
           </Button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={isOpen}
+        onOpenChange={closeDialog}
+        onConfirm={dialogProps.onConfirm}
+        title={dialogProps.title}
+        description={dialogProps.description}
+        confirmText={dialogProps.confirmText}
+        cancelText={dialogProps.cancelText}
+      />
     </div>
   );
 }

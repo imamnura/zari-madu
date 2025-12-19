@@ -1,4 +1,4 @@
-# Zari Life Landing Page - Quick Start
+# Zari Honey Landing Page - Quick Start
 
 ## 🚀 Development
 

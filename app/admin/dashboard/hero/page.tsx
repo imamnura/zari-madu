@@ -125,20 +125,24 @@ export default function HeroContentPage() {
   // Check if form is valid for submission
   const isFormValid = badges.length >= 1 && typewriterTexts.length >= 1;
 
-  // Handle image upload
+  // Handle image upload to Cloudinary
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (1MB)
-    if (file.size > 1 * 1024 * 1024) {
-      toast.error("Ukuran file maksimal 1MB");
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Ukuran file maksimal 10MB");
       return;
     }
 
     // Validate file type
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Format file harus JPEG, PNG, atau WebP");
+    if (
+      !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
+        file.type
+      )
+    ) {
+      toast.error("Format file harus JPEG, PNG, WebP, atau GIF");
       return;
     }
 
@@ -147,8 +151,9 @@ export default function HeroContentPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("folder", "zari-honey/heroes");
 
-      const res = await fetch("/api/admin/upload", {
+      const res = await fetch("/api/admin/cloudinary-upload", {
         method: "POST",
         body: formData,
       });
@@ -158,7 +163,7 @@ export default function HeroContentPage() {
       if (res.ok) {
         setValue("productImage", data.url);
         setPreviewImage(data.url);
-        toast.success("Gambar berhasil diupload");
+        toast.success("Gambar berhasil diupload ke Cloudinary");
       } else {
         toast.error(data.error || "Gagal upload gambar");
       }

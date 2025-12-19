@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const settingsSchema = z.object({
+  siteName: z.string().min(1, "Nama site harus diisi"),
   whatsapp: z.string().min(10, "Nomor WhatsApp minimal 10 karakter"),
   instagram: z.string().url("Instagram harus berupa URL yang valid"),
   email: z.string().email("Email harus valid"),
@@ -23,6 +24,7 @@ export async function GET() {
     if (!settings) {
       settings = await prisma.settings.create({
         data: {
+          siteName: "Zari Honey",
           whatsapp: "+6285777578827",
           instagram: "https://www.instagram.com/zarihoney",
           email: "info@zarilife.com",

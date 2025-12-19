@@ -13,7 +13,7 @@ async function main() {
     create: {
       email: "admin@zarilife.com",
       password: hashedPassword,
-      name: "Admin Zari Life",
+      name: "Admin Zari Honey",
     },
   });
 
@@ -50,8 +50,8 @@ async function main() {
     create: {
       id: "default",
       tagline: "Terpercaya & Berkualitas",
-      heading: "Tentang Zari Life",
-      body: "Zari Life hadir dengan komitmen menghadirkan madu dan hasil alam Indonesia yang premium, murni, dan berkualitas tinggi. Kami bekerja langsung dengan peternak lokal terpilih untuk memastikan setiap produk memenuhi standar kualitas tertinggi.",
+      heading: "Tentang Zari Honey",
+      body: "Zari Honey hadir dengan komitmen menghadirkan madu dan hasil alam Indonesia yang premium, murni, dan berkualitas tinggi. Kami bekerja langsung dengan peternak lokal terpilih untuk memastikan setiap produk memenuhi standar kualitas tertinggi.",
       stats: JSON.stringify([
         { value: "1M+", label: "Pelanggan Puas" },
         { value: "100%", label: "Madu Murni" },
@@ -69,7 +69,7 @@ async function main() {
     update: {},
     create: {
       id: "default",
-      heading: "Mengapa Memilih Zari Life?",
+      heading: "Mengapa Memilih Zari Honey?",
       title: "Komitmen kami pada kualitas dan kepuasan Anda",
       criteria: JSON.stringify([
         {
@@ -121,7 +121,7 @@ async function main() {
     create: {
       id: "default",
       heading: "Apa Kata Mereka?",
-      title: "Ribuan pelanggan puas telah merasakan kualitas Zari Life",
+      title: "Ribuan pelanggan puas telah merasakan kualitas Zari Honey",
       testimonials: JSON.stringify([
         {
           id: 1,
@@ -242,7 +242,7 @@ async function main() {
             "Tips praktis untuk mengidentifikasi madu murni dan menghindari produk palsu di pasaran.",
           image: "/images/articles/madu-asli.jpg",
           category: "Tips",
-          author: "Tim Zari Life",
+          author: "Tim Zari Honey",
           date: "8 Desember 2025",
           readTime: "4 min",
           content: `<h2>Kenali Ciri-ciri Madu Asli</h2><p>Dengan maraknya madu palsu di pasaran, penting untuk mengetahui cara membedakan madu asli dan palsu.</p><h3>1. Tes Air</h3><p>Teteskan madu ke dalam segelas air dingin. Madu asli akan tenggelam dan mengendap di dasar gelas.</p>`,
@@ -266,15 +266,15 @@ async function main() {
         {
           id: 4,
           slug: "proses-produksi-madu-zari-life",
-          title: "Di Balik Layar: Proses Produksi Madu Zari Life",
+          title: "Di Balik Layar: Proses Produksi Madu Zari Honey",
           excerpt:
             "Ikuti perjalanan madu dari sarang lebah hingga botol premium di tangan Anda.",
           image: "/images/articles/produksi.jpg",
           category: "Behind The Scene",
-          author: "Tim Zari Life",
+          author: "Tim Zari Honey",
           date: "1 Desember 2025",
           readTime: "7 min",
-          content: `<h2>Dari Hutan ke Meja Anda</h2><p>Setiap botol madu Zari Life melalui proses yang ketat dan penuh perhatian untuk memastikan kualitas premium sampai ke tangan Anda.</p>`,
+          content: `<h2>Dari Hutan ke Meja Anda</h2><p>Setiap botol madu Zari Honey melalui proses yang ketat dan penuh perhatian untuk memastikan kualitas premium sampai ke tangan Anda.</p>`,
           tags: ["produksi", "kualitas", "behind the scene"],
         },
       ]),

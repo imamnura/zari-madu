@@ -201,7 +201,7 @@ export default function AboutContentPage() {
             <input
               {...register("heading")}
               type="text"
-              placeholder="Tentang Zari Life"
+              placeholder="Tentang Zari Honey"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
             />
             {errors.heading && (
@@ -224,7 +224,7 @@ export default function AboutContentPage() {
             <textarea
               {...register("body")}
               rows={5}
-              placeholder="Zari Life hadir dengan komitmen menghadirkan madu dan hasil alam Indonesia..."
+              placeholder="Zari Honey hadir dengan komitmen menghadirkan madu dan hasil alam Indonesia..."
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
             />
             <p className="text-xs text-gray-500 mt-2">

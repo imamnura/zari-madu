@@ -24,14 +24,14 @@ export async function GET() {
   };
 
   try {
-    let content = await prisma.whyChooseContent.findFirst({
+    const content = await prisma.whyChooseContent.findFirst({
       orderBy: { updatedAt: "desc" },
     });
 
     if (!content) {
       // Return default content from constants
       return NextResponse.json({
-        heading: "Mengapa Memilih Zari Life?",
+        heading: "Mengapa Memilih Zari Honey?",
         title: "Komitmen kami pada kualitas dan kepuasan Anda",
         criteria: [
           {

@@ -26,7 +26,7 @@ export async function GET() {
   };
 
   try {
-    let content = await prisma.partnershipContent.findFirst({
+    const content = await prisma.partnershipContent.findFirst({
       orderBy: { updatedAt: "desc" },
     });
 

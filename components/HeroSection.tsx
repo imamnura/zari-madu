@@ -3,8 +3,12 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { HERO_CONTENT, CONTACT_INFO, WHATSAPP_MESSAGES } from "@/lib/constants";
+import { HERO_CONTENT } from "@/lib/constants";
 import { openWhatsApp } from "@/lib/whatsapp";
+import {
+  trackWhatsAppClick,
+  trackShopeeClick,
+} from "@/components/GoogleAnalytics";
 import { RunningText } from "./RunningText";
 import { Typewriter } from "./Typewriter";
 import { Sparkles, ShoppingBag } from "lucide-react";
@@ -25,9 +29,11 @@ interface Settings {
   shopeeLink: string;
   mapsLocation: string;
   mapsEmbed: string;
+  whatsappOrderMessage?: string;
+  whatsappResellerMessage?: string;
 }
 
-type ContactSettings = Settings | typeof CONTACT_INFO;
+type ContactSettings = Settings;
 
 export function HeroSection() {
   const [heroData, setHeroData] = useState<HeroData | null>(null);
@@ -61,20 +67,33 @@ export function HeroSection() {
       });
   }, []);
 
-  const contactInfo: ContactSettings = settings || CONTACT_INFO;
+  const contactInfo: ContactSettings | null = settings;
 
   const handleOrderClick = () => {
-    openWhatsApp(contactInfo.whatsapp, WHATSAPP_MESSAGES.order);
+    if (contactInfo) {
+      const message =
+        contactInfo.whatsappOrderMessage ||
+        "Halo Zari, saya tertarik memesan madu premium. Mohon info detail & harganya.";
+      trackWhatsAppClick("order");
+      openWhatsApp(contactInfo.whatsapp, message);
+    }
   };
 
   const handleResellerClick = () => {
-    openWhatsApp(contactInfo.whatsapp, WHATSAPP_MESSAGES.reseller);
+    if (contactInfo) {
+      const message =
+        contactInfo.whatsappResellerMessage ||
+        "Halo Zari, saya tertarik menjadi reseller premium. Mohon informasi lebih lanjut.";
+      trackWhatsAppClick("reseller");
+      openWhatsApp(contactInfo.whatsapp, message);
+    }
   };
 
   const handleShopeeClick = () => {
-    const shopeeUrl =
-      "shopeeLink" in contactInfo ? contactInfo.shopeeLink : contactInfo.shopee;
-    window.open(shopeeUrl, "_blank");
+    if (contactInfo) {
+      trackShopeeClick();
+      window.open(contactInfo.shopeeLink, "_blank");
+    }
   };
 
   // Show loading or fallback while data is being fetched

@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SEO_CONTENT } from "@/lib/constants";
 import { Toaster } from "sonner";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { Suspense } from "react";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -35,6 +37,9 @@ export default function RootLayout({
   return (
     <html lang="id" className="scroll-smooth">
       <body className={`${inter.variable} antialiased font-sans`}>
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
         {children}
         <Toaster position="top-right" richColors />
       </body>

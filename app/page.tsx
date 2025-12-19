@@ -19,7 +19,7 @@ export default function Home() {
       <main>
         <HeroSection />
         <AboutSection />
-        <ProductLinesSection />
+        {/* <ProductLinesSection /> */}
         <WhyChooseSection />
         <ProductShowcaseSection />
         <PartnershipSection />

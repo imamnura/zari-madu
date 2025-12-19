@@ -44,7 +44,7 @@ export function WhyChooseSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [content, setContent] = useState<WhyChooseData>({
-    heading: "Mengapa Memilih Zari Life?",
+    heading: "Mengapa Memilih Zari Honey?",
     title: "Komitmen kami pada kualitas dan kepuasan Anda",
     criteria: WHY_CHOOSE_ZARI,
   });

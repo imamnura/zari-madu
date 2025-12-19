@@ -1,4 +1,4 @@
-# Setup Database MySQL untuk Zari Life Admin Dashboard
+# Setup Database MySQL untuk Zari Honey Admin Dashboard
 
 ## Prasyarat
 

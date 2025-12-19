@@ -20,6 +20,10 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import TiptapEditor from "@/components/admin/TiptapEditor";
+import {
+  ConfirmDialog,
+  useConfirmDialog,
+} from "@/components/ui/confirm-dialog";
 
 // Category options
 const CATEGORIES = [
@@ -80,6 +84,7 @@ export default function ArticlesPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { isOpen, openDialog, closeDialog, dialogProps } = useConfirmDialog();
 
   // Article form states
   const [showArticleForm, setShowArticleForm] = useState(false);
@@ -264,13 +269,19 @@ export default function ArticlesPage() {
 
   // Delete article
   const handleDeleteArticle = (id: number) => {
-    if (confirm("Hapus artikel ini?")) {
-      setContent({
-        ...content,
-        articles: content.articles.filter((a) => a.id !== id),
-      });
-      toast.success("Artikel berhasil dihapus!");
-    }
+    openDialog({
+      title: "Hapus Artikel",
+      description:
+        "Apakah Anda yakin ingin menghapus artikel ini? Data yang dihapus tidak dapat dikembalikan.",
+      confirmText: "Ya, Hapus",
+      onConfirm: () => {
+        setContent({
+          ...content,
+          articles: content.articles.filter((a) => a.id !== id),
+        });
+        toast.success("Artikel berhasil dihapus!");
+      },
+    });
   };
 
   // Add tag
@@ -882,6 +893,16 @@ export default function ArticlesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={isOpen}
+        onOpenChange={closeDialog}
+        onConfirm={dialogProps.onConfirm}
+        title={dialogProps.title}
+        description={dialogProps.description}
+        confirmText={dialogProps.confirmText}
+        cancelText={dialogProps.cancelText}
+      />
     </div>
   );
 }

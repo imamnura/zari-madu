@@ -27,7 +27,7 @@ export function TestimonialsSection() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
   const [content, setContent] = useState<TestimonialData>({
     heading: "Apa Kata Mereka?",
-    title: "Ribuan pelanggan puas telah merasakan kualitas Zari Life",
+    title: "Ribuan pelanggan puas telah merasakan kualitas Zari Honey",
     testimonials: TESTIMONIALS,
   });
 
