@@ -10,10 +10,36 @@ import { TestimonialsSection } from "@/components/TestimonialsSection";
 import { ArticlesSection } from "@/components/ArticlesSection";
 import { CTASection } from "@/components/CTASection";
 import { Footer } from "@/components/Footer";
+import {
+  generateOrganizationSchema,
+  generateWebsiteSchema,
+  generateLocalBusinessSchema,
+} from "@/lib/schema";
 
 export default function Home() {
+  // Structured data for SEO
+  const organizationSchema = generateOrganizationSchema();
+  const websiteSchema = generateWebsiteSchema();
+  const localBusinessSchema = generateLocalBusinessSchema();
+
   return (
     <div className="min-h-screen">
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(localBusinessSchema),
+        }}
+      />
+
       <LoadingProgress />
       <Header />
       <main>
