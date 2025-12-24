@@ -106,24 +106,29 @@ model Settings {
 
 model PremiumHoneyCollection {
   id          String   @id @default(cuid())
+  honeyCollectionContentId String?
   name        String
   description String   @db.Text
   price       String?
-  image       String?  @db.LongText
+  image       String?  @db.VarChar(500)
   label       String?
   features    Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  honeyCollectionContent HoneyCollectionContent? @relation(fields: [honeyCollectionContentId], references: [id], onDelete: Cascade)
 
   @@map("premium_honey_collections")
 }
 
 model HoneyCollectionContent {
   id          String   @id @default(cuid())
-  title       String   @default("Koleksi Madu Premium")
+  title       String   @default("Produk Premium Kami")
   description String   @default("Pilihan terbaik dari berbagai sumber nektar pilihan Indonesia")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  products    PremiumHoneyCollection[]
 
   @@map("honey_collection_contents")
 }

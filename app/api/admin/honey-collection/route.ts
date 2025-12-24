@@ -6,6 +6,11 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: NextRequest) {
   try {
     const collections = await prisma.premiumHoneyCollection.findMany({
+      where: {
+        honeyCollectionContentId: {
+          not: null,
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
 
