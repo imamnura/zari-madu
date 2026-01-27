@@ -39,7 +39,7 @@
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.561.0",
     "mysql2": "^3.15.3",
-    "next": "16.0.10",
+    "next": "16.1.5",
     "next-auth": "^5.0.0-beta.30",
     "next-cloudinary": "^6.17.5",
     "prisma": "5.22.0",
