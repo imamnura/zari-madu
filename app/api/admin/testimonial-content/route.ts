@@ -10,6 +10,7 @@ const testimonialSchema = z.object({
   city: z.string().min(1, "Kota harus diisi"),
   text: z.string().min(1, "Testimoni harus diisi"),
   rating: z.number().min(1).max(5, "Rating harus antara 1-5"),
+  avatarUrl: z.string().max(2048).optional(),
 });
 
 const testimonialContentSchema = z.object({

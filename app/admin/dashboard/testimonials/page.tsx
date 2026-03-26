@@ -13,6 +13,7 @@ import {
   ConfirmDialog,
   useConfirmDialog,
 } from "@/components/ui/confirm-dialog";
+import { TestimonialAvatar } from "@/components/TestimonialAvatar";
 
 type Testimonial = {
   id: number;
@@ -20,6 +21,7 @@ type Testimonial = {
   city: string;
   text: string;
   rating: number;
+  avatarUrl?: string;
 };
 
 const testimonialSchema = z.object({
@@ -28,6 +30,7 @@ const testimonialSchema = z.object({
   city: z.string().min(1, "Kota harus diisi"),
   text: z.string().min(1, "Testimoni harus diisi"),
   rating: z.number().min(1).max(5, "Rating harus antara 1-5"),
+  avatarUrl: z.string().max(2048).optional(),
 });
 
 const testimonialContentSchema = z.object({
@@ -47,6 +50,7 @@ export default function TestimonialsContentPage() {
   const [cityInput, setCityInput] = useState("");
   const [textInput, setTextInput] = useState("");
   const [ratingInput, setRatingInput] = useState(5);
+  const [avatarUrlInput, setAvatarUrlInput] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const { isOpen, openDialog, closeDialog, dialogProps } = useConfirmDialog();
 
@@ -101,12 +105,15 @@ export default function TestimonialsContentPage() {
       return;
     }
 
-    const newTestimonial = {
+    const newTestimonial: Testimonial = {
       id: editingIndex !== null ? testimonials[editingIndex].id : Date.now(),
       name: nameInput,
       city: cityInput,
       text: textInput,
       rating: ratingInput,
+      ...(avatarUrlInput.trim()
+        ? { avatarUrl: avatarUrlInput.trim() }
+        : {}),
     };
 
     if (editingIndex !== null) {
@@ -127,6 +134,7 @@ export default function TestimonialsContentPage() {
     setCityInput("");
     setTextInput("");
     setRatingInput(5);
+    setAvatarUrlInput("");
   };
 
   // Edit testimonial
@@ -136,6 +144,7 @@ export default function TestimonialsContentPage() {
     setCityInput(testimonial.city);
     setTextInput(testimonial.text);
     setRatingInput(testimonial.rating);
+    setAvatarUrlInput(testimonial.avatarUrl ?? "");
     setEditingIndex(index);
   };
 
@@ -159,6 +168,7 @@ export default function TestimonialsContentPage() {
     setCityInput("");
     setTextInput("");
     setRatingInput(5);
+    setAvatarUrlInput("");
     setEditingIndex(null);
   };
 
@@ -316,6 +326,33 @@ export default function TestimonialsContentPage() {
                   />
                 </div>
 
+                {/* Avatar URL (opsional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL foto profil (opsional)
+                  </label>
+                  <input
+                    type="url"
+                    value={avatarUrlInput}
+                    onChange={(e) => setAvatarUrlInput(e.target.value)}
+                    placeholder="https://res.cloudinary.com/... atau kosongkan untuk inisial nama"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Jika dikosongkan, avatar memakai inisial (mis. Ibu Sari → IS).
+                  </p>
+                  {(nameInput || avatarUrlInput) && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <span className="text-xs text-gray-500">Pratinjau:</span>
+                      <TestimonialAvatar
+                        name={nameInput || "Nama"}
+                        avatarUrl={avatarUrlInput || undefined}
+                        size="lg"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Text Input */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -403,15 +440,21 @@ export default function TestimonialsContentPage() {
                   Belum ada testimoni. Tambahkan minimal 1 testimoni.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {testimonials.map((testimonial, index) => (
                     <div
                       key={testimonial.id}
                       className="p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-amber-300 transition-colors"
                     >
                       <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                        <TestimonialAvatar
+                          name={testimonial.name}
+                          avatarUrl={testimonial.avatarUrl}
+                          size="lg"
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
                             <h5 className="font-semibold text-gray-900">
                               {testimonial.name}
                             </h5>

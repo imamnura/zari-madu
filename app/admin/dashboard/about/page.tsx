@@ -19,7 +19,7 @@ const aboutSchema = z.object({
       z.object({
         value: z.string().min(1, "Value harus diisi"),
         label: z.string().min(1, "Label harus diisi"),
-      })
+      }),
     )
     .min(1, "Minimal 1 stat diperlukan"),
 });
@@ -104,7 +104,7 @@ export default function AboutContentPage() {
   const handleUpdateStat = (
     index: number,
     field: "value" | "label",
-    value: string
+    value: string,
   ) => {
     const newStats = [...stats];
     newStats[index][field] = value;

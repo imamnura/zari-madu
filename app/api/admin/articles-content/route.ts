@@ -24,13 +24,9 @@ const articleContentSchema = z.object({
   articles: z.array(articleSchema).min(1, "Minimal 1 artikel"),
 });
 
+/** GET publik: konten artikel untuk landing & listing (tanpa auth). PUT tetap dilindungi. */
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const content = await prisma.articleContent.findFirst({
       orderBy: { updatedAt: "desc" },
     });

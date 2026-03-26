@@ -15,6 +15,7 @@ import {
   Upload,
   Image as ImageIcon,
   Info,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -101,12 +102,16 @@ export default function ArticlesPage() {
   const [tagsArray, setTagsArray] = useState<string[]>([]);
   const [categorySearch, setCategorySearch] = useState("");
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  /** Remount editor tiap buka modal agar konten tidak tertinggal dari sesi sebelumnya */
+  const [articleEditorKey, setArticleEditorKey] = useState(0);
 
   // Image upload states
   const [imageUploadType, setImageUploadType] = useState<"url" | "file">("url");
   const [showImageInfo, setShowImageInfo] = useState(false);
+  const [imagePreviewLoaded, setImagePreviewLoaded] = useState(false);
+  const [imagePreviewError, setImagePreviewError] = useState(false);
 
-  // Debounced image URL for preview
+  // Debounced image URL for preview (URL mode)
   const debouncedImageUrl = useDebounce(imageInput, 500);
 
   // Generate slug from title
@@ -123,10 +128,17 @@ export default function ArticlesPage() {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const response = await fetch("/api/admin/articles-content");
+        const response = await fetch("/api/admin/articles-content", {
+          cache: "no-store",
+        });
         if (response.ok) {
           const data = await response.json();
-          setContent(data);
+          setContent({
+            heading: data.heading ?? "",
+            title: data.title ?? "",
+            description: data.description ?? "",
+            articles: Array.isArray(data.articles) ? data.articles : [],
+          });
         }
       } catch (error) {
         console.error("Error fetching articles content:", error);
@@ -176,11 +188,18 @@ export default function ArticlesPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(content),
+        cache: "no-store",
       });
 
       if (response.ok) {
+        const data = await response.json();
+        setContent({
+          heading: data.heading ?? "",
+          title: data.title ?? "",
+          description: data.description ?? "",
+          articles: Array.isArray(data.articles) ? data.articles : [],
+        });
         toast.success("Artikel content berhasil disimpan!");
-        setTimeout(() => window.location.reload(), 1500);
       } else {
         const error = await response.json();
         toast.error(error.error || "Gagal menyimpan artikel content");
@@ -206,6 +225,7 @@ export default function ArticlesPage() {
     setContentInput("");
     setTagInput("");
     setTagsArray([]);
+    setArticleEditorKey((k) => k + 1);
     setShowArticleForm(true);
   };
 
@@ -221,6 +241,7 @@ export default function ArticlesPage() {
     setReadTimeInput(article.readTime);
     setContentInput(article.content);
     setTagsArray(article.tags);
+    setArticleEditorKey((k) => k + 1);
     setShowArticleForm(true);
   };
 
@@ -247,20 +268,18 @@ export default function ArticlesPage() {
     };
 
     if (editingArticleId) {
-      // Update existing article
-      setContent({
-        ...content,
-        articles: content.articles.map((a) =>
-          a.id === editingArticleId ? newArticle : a
+      setContent((prev) => ({
+        ...prev,
+        articles: prev.articles.map((a) =>
+          a.id === editingArticleId ? newArticle : a,
         ),
-      });
+      }));
       toast.success("Artikel berhasil diupdate!");
     } else {
-      // Add new article
-      setContent({
-        ...content,
-        articles: [...content.articles, newArticle],
-      });
+      setContent((prev) => ({
+        ...prev,
+        articles: [...prev.articles, newArticle],
+      }));
       toast.success("Artikel berhasil ditambahkan!");
     }
 
@@ -275,10 +294,10 @@ export default function ArticlesPage() {
         "Apakah Anda yakin ingin menghapus artikel ini? Data yang dihapus tidak dapat dikembalikan.",
       confirmText: "Ya, Hapus",
       onConfirm: () => {
-        setContent({
-          ...content,
-          articles: content.articles.filter((a) => a.id !== id),
-        });
+        setContent((prev) => ({
+          ...prev,
+          articles: prev.articles.filter((a) => a.id !== id),
+        }));
         toast.success("Artikel berhasil dihapus!");
       },
     });
@@ -315,6 +334,8 @@ export default function ArticlesPage() {
       return;
     }
 
+    setImagePreviewError(false);
+    setImagePreviewLoaded(false);
     const reader = new FileReader();
     reader.onloadend = () => {
       setImageInput(reader.result as string);
@@ -324,7 +345,22 @@ export default function ArticlesPage() {
       toast.error("Gagal membaca file");
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
+
+  const urlPreviewSrc =
+    imageUploadType === "url" ? debouncedImageUrl.trim() : "";
+  const filePreviewSrc = imageUploadType === "file" ? imageInput.trim() : "";
+  const activePreviewSrc = urlPreviewSrc || filePreviewSrc;
+  const urlDebouncing =
+    imageUploadType === "url" &&
+    imageInput.trim().length > 0 &&
+    imageInput.trim() !== debouncedImageUrl.trim();
+
+  useEffect(() => {
+    setImagePreviewLoaded(false);
+    setImagePreviewError(false);
+  }, [activePreviewSrc, urlDebouncing, imageUploadType]);
 
   // Filter categories based on search
   const filteredCategories = CATEGORIES.filter((cat) =>
@@ -661,60 +697,63 @@ export default function ArticlesPage() {
                 )}
 
                 {imageUploadType === "url" ? (
-                  <>
-                    <input
-                      type="text"
-                      value={imageInput}
-                      onChange={(e) => setImageInput(e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
-                    />
-                    {debouncedImageUrl && (
-                      <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-medium text-gray-700 mb-2">
-                          Preview:
-                        </p>
-                        <div className="aspect-video bg-white rounded border border-gray-200 overflow-hidden">
+                  <input
+                    type="text"
+                    value={imageInput}
+                    onChange={(e) => setImageInput(e.target.value)}
+                    placeholder="https://example.com/image.jpg atau data:image/..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                  />
+                ) : (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileUpload}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                  />
+                )}
+
+                {Boolean(activePreviewSrc) && (
+                  <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-xs font-medium text-gray-700 mb-2">
+                      Preview gambar
+                    </p>
+                    <div className="relative aspect-video bg-white rounded border border-gray-200 overflow-hidden">
+                      {(urlDebouncing ||
+                        (!imagePreviewError && !imagePreviewLoaded)) && (
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/90">
+                          <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                          <span className="text-xs text-gray-500">
+                            {urlDebouncing
+                              ? "Menunggu ketikan selesai…"
+                              : "Memuat gambar…"}
+                          </span>
+                        </div>
+                      )}
+                      {imagePreviewError ? (
+                        <div className="flex h-full min-h-[120px] items-center justify-center px-4 text-center text-sm text-red-600">
+                          Gambar tidak dapat dimuat. Periksa URL atau format
+                          file.
+                        </div>
+                      ) : (
+                        !urlDebouncing && (
                           <img
-                            src={debouncedImageUrl}
-                            alt="Preview"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = "none";
-                              const parent = target.parentElement;
-                              if (parent) {
-                                parent.innerHTML =
-                                  '<div class="flex items-center justify-center w-full h-full text-red-500 text-sm">❌ Invalid image URL</div>';
-                              }
+                            key={activePreviewSrc.slice(0, 120)}
+                            src={activePreviewSrc}
+                            alt=""
+                            className={`h-full w-full object-cover transition-opacity duration-200 ${imagePreviewLoaded ? "opacity-100" : "opacity-0"}`}
+                            onLoad={() => {
+                              setImagePreviewLoaded(true);
+                              setImagePreviewError(false);
+                            }}
+                            onError={() => {
+                              setImagePreviewLoaded(true);
+                              setImagePreviewError(true);
                             }}
                           />
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageFileUpload}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
-                    />
-                    {imageInput && (
-                      <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-medium text-gray-700 mb-2">
-                          Preview:
-                        </p>
-                        <div className="aspect-video bg-white rounded border border-gray-200 overflow-hidden">
-                          <img
-                            src={imageInput}
-                            alt="Preview"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                    )}
+                        )
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -867,6 +906,7 @@ export default function ArticlesPage() {
                   </span>
                 </label>
                 <TiptapEditor
+                  key={articleEditorKey}
                   content={contentInput}
                   onChange={setContentInput}
                 />

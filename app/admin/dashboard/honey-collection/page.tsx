@@ -48,7 +48,6 @@ export default function HoneyCollectionPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [showSectionForm, setShowSectionForm] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { isOpen, openDialog, closeDialog, dialogProps } = useConfirmDialog();
@@ -126,7 +125,6 @@ export default function HoneyCollectionPage() {
 
       if (data.success) {
         toast.success(data.message);
-        setShowSectionForm(false);
       } else {
         toast.error(data.error || "Gagal menyimpan section content");
       }
@@ -152,7 +150,7 @@ export default function HoneyCollectionPage() {
     // Check file type
     if (
       !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
-        file.type
+        file.type,
       )
     ) {
       toast.error("Format file harus JPEG, PNG, WebP, atau GIF");
@@ -296,6 +294,13 @@ export default function HoneyCollectionPage() {
     return <LoadingProgress />;
   }
 
+  const convertToRupiah = (value: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+    }).format(value);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -308,7 +313,7 @@ export default function HoneyCollectionPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2 sm:gap-3">
-          <Link href="/#honey-collection" target="_blank">
+          <Link href="/#products" target="_blank">
             <Button
               variant="outline"
               className="border-amber-600 text-amber-600 hover:bg-amber-50"
@@ -317,14 +322,6 @@ export default function HoneyCollectionPage() {
               Preview
             </Button>
           </Link>
-          <Button
-            onClick={() => setShowSectionForm(!showSectionForm)}
-            variant="outline"
-            className="border-amber-600 text-amber-600 hover:bg-amber-50"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            Edit Section
-          </Button>
           <Button
             onClick={() => setShowForm(!showForm)}
             className="bg-amber-600 hover:bg-amber-700"
@@ -336,78 +333,68 @@ export default function HoneyCollectionPage() {
       </div>
 
       {/* Section Content Form */}
-      {showSectionForm && (
-        <Card className="border-2 border-amber-200">
-          <CardHeader>
-            <CardTitle>Edit Section Content</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSectionSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Title Section *
-                </label>
-                <input
-                  type="text"
-                  value={sectionContent.title}
-                  onChange={(e) =>
-                    setSectionContent({
-                      ...sectionContent,
-                      title: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="Koleksi Madu Premium"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Title yang akan muncul di landing page
-                </p>
-              </div>
+      <Card className="border-2">
+        <CardHeader>
+          <CardTitle>Edit Section Content</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSectionSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Title Section *
+              </label>
+              <input
+                type="text"
+                value={sectionContent.title}
+                onChange={(e) =>
+                  setSectionContent({
+                    ...sectionContent,
+                    title: e.target.value,
+                  })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                placeholder="Koleksi Madu Premium"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Title yang akan muncul di landing page
+              </p>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description Section *
-                </label>
-                <textarea
-                  value={sectionContent.description}
-                  onChange={(e) =>
-                    setSectionContent({
-                      ...sectionContent,
-                      description: e.target.value,
-                    })
-                  }
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="Pilihan terbaik dari berbagai sumber nektar pilihan Indonesia"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Deskripsi singkat untuk section ini
-                </p>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description Section *
+              </label>
+              <textarea
+                value={sectionContent.description}
+                onChange={(e) =>
+                  setSectionContent({
+                    ...sectionContent,
+                    description: e.target.value,
+                  })
+                }
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                placeholder="Pilihan terbaik dari berbagai sumber nektar pilihan Indonesia"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Deskripsi singkat untuk section ini
+              </p>
+            </div>
 
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="submit"
-                  disabled={saving}
-                  className="bg-amber-600 hover:bg-amber-700"
-                >
-                  {saving ? "Menyimpan..." : "Simpan Section"}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => setShowSectionForm(false)}
-                  variant="outline"
-                  disabled={saving}
-                >
-                  Batal
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="submit"
+                disabled={saving}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                {saving ? "Menyimpan..." : "Simpan Section"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Collection Form */}
       {showForm && (
@@ -568,7 +555,7 @@ export default function HoneyCollectionPage() {
                 </p>
                 {collection.price && (
                   <p className="text-amber-600 font-semibold mb-3">
-                    {collection.price}
+                    {convertToRupiah(Number(collection?.price))}
                   </p>
                 )}
                 <div className="flex gap-2">

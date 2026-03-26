@@ -2,15 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// GET - Retrieve all premium honey collections
-export async function GET(request: NextRequest) {
+/** Section row used to group products; same defaults as honey-collection-content GET. */
+async function getOrCreateHoneyCollectionContentId(): Promise<string> {
+  let content = await prisma.honeyCollectionContent.findFirst({
+    orderBy: { updatedAt: "desc" },
+  });
+  if (!content) {
+    content = await prisma.honeyCollectionContent.create({
+      data: {
+        title: "Koleksi Madu Premium",
+        description:
+          "Pilihan terbaik dari berbagai sumber nektar pilihan Indonesia",
+      },
+    });
+  }
+  return content.id;
+}
+
+// GET - Retrieve all premium honey collections (include rows with null FK for legacy data)
+export async function GET() {
   try {
     const collections = await prisma.premiumHoneyCollection.findMany({
-      where: {
-        honeyCollectionContentId: {
-          not: null,
-        },
-      },
       orderBy: { createdAt: "desc" },
     });
 
@@ -55,6 +67,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const honeyCollectionContentId = await getOrCreateHoneyCollectionContentId();
+
     const collection = await prisma.premiumHoneyCollection.create({
       data: {
         name,
@@ -62,7 +76,8 @@ export async function POST(request: NextRequest) {
         price: price || null,
         image: image || null,
         label: label || null,
-        features: features || null,
+        features: features ?? null,
+        honeyCollectionContentId,
       },
     });
 
@@ -118,6 +133,20 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    const existing = await prisma.premiumHoneyCollection.findUnique({
+      where: { id },
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: "Koleksi tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    const honeyCollectionContentId =
+      existing.honeyCollectionContentId ??
+      (await getOrCreateHoneyCollectionContentId());
+
     const collection = await prisma.premiumHoneyCollection.update({
       where: { id },
       data: {
@@ -126,7 +155,8 @@ export async function PUT(request: NextRequest) {
         price: price || null,
         image: image || null,
         label: label || null,
-        features: features || null,
+        features: features ?? null,
+        honeyCollectionContentId,
       },
     });
 

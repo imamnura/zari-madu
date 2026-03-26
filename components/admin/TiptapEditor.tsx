@@ -26,23 +26,26 @@ export default function TiptapEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // Configure heading levels
         heading: {
           levels: [1, 2, 3, 4, 5, 6],
         },
-        // BulletList and OrderedList are included by default in StarterKit
         bulletList: {
           keepMarks: true,
           keepAttributes: false,
+          HTMLAttributes: {
+            class: "list-disc pl-6 my-2",
+          },
         },
         orderedList: {
           keepMarks: true,
           keepAttributes: false,
+          HTMLAttributes: {
+            class: "list-decimal pl-6 my-2",
+          },
         },
-        // ListItem is required for lists
         listItem: {
           HTMLAttributes: {
-            class: "ml-4",
+            class: "my-1 pl-1",
           },
         },
         // Blockquote styling
@@ -109,7 +112,7 @@ export default function TiptapEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[300px] px-4 py-3 focus:outline-none",
+          "prose prose-neutral prose-sm sm:prose-base max-w-none min-h-[300px] px-4 py-3 focus:outline-none [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6 [&_li]:my-1 [&_h1]:text-3xl [&_h1]:font-bold [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:text-xl [&_h3]:font-semibold",
       },
     },
     onUpdate: ({ editor }) => {
