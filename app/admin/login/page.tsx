@@ -1,36 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LogIn, Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/ui/password-input";
 
+const turnstileSiteKey =
+  process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
+
 export default function AdminLoginPage() {
   const router = useRouter();
+  const turnstileRef = useRef<TurnstileInstance>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
 
+  const captchaRequired = Boolean(turnstileSiteKey);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (captchaRequired && !turnstileToken) {
+      toast.error("Selesaikan verifikasi captcha terlebih dahulu");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const result = await signIn("credentials", {
         email,
         password,
+        turnstileToken: turnstileToken ?? "",
         redirect: false,
       });
 
       if (result?.error) {
         toast.error(result.error);
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
       } else {
         toast.success("Login berhasil!");
         router.push("/admin/dashboard");
@@ -38,6 +54,8 @@ export default function AdminLoginPage() {
       }
     } catch (error) {
       toast.error("Terjadi kesalahan. Silakan coba lagi.");
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -131,9 +149,38 @@ export default function AdminLoginPage() {
                   </button>
                 </div>
 
+                {turnstileSiteKey ? (
+                  <div className="flex justify-center min-h-[65px]">
+                    <Turnstile
+                      ref={turnstileRef}
+                      siteKey={turnstileSiteKey}
+                      onSuccess={setTurnstileToken}
+                      onExpire={() => setTurnstileToken(null)}
+                      onError={() => {
+                        setTurnstileToken(null);
+                        toast.error("Captcha gagal dimuat. Coba refresh halaman.");
+                      }}
+                      options={{
+                        language: "id",
+                        theme: "light",
+                        size: "flexible",
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
+                    Mode dev: captcha dinonaktifkan. Set{" "}
+                    <code className="font-mono">NEXT_PUBLIC_TURNSTILE_SITE_KEY</code>{" "}
+                    dan <code className="font-mono">TURNSTILE_SECRET_KEY</code> di
+                    production.
+                  </p>
+                )}
+
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={
+                    loading || (captchaRequired && !turnstileToken)
+                  }
                   className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white py-6 text-lg font-semibold"
                 >
                   {loading ? (
@@ -149,13 +196,6 @@ export default function AdminLoginPage() {
                   )}
                 </Button>
               </form>
-
-              <div className="mt-6 text-center text-sm text-gray-600">
-                <p>Default login:</p>
-                <p className="font-mono bg-gray-50 p-2 rounded mt-2">
-                  admin@zarilife.com / admin123
-                </p>
-              </div>
             </>
           ) : (
             <>

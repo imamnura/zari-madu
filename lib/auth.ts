@@ -2,6 +2,10 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import {
+  isTurnstileConfigured,
+  verifyTurnstileToken,
+} from "@/lib/turnstile";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -9,10 +13,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        turnstileToken: { label: "Turnstile", type: "text" },
       },
       authorize: async (credentials) => {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email dan password harus diisi");
+        }
+
+        if (isTurnstileConfigured()) {
+          const token = credentials.turnstileToken as string | undefined;
+          if (!token?.trim()) {
+            throw new Error("Selesaikan verifikasi captcha terlebih dahulu");
+          }
+          const ok = await verifyTurnstileToken(token);
+          if (!ok) {
+            throw new Error("Verifikasi captcha gagal. Muat ulang halaman dan coba lagi.");
+          }
         }
 
         const admin = await prisma.admin.findUnique({

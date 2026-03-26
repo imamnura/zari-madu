@@ -1,5 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 
+/**
+ * Akses DB hanya lewat Prisma (query terparameter). Jangan memakai
+ * `$queryRawUnsafe` / `$executeRawUnsafe` dengan string yang disusun dari input user.
+ */
 declare global {
   var prisma: PrismaClient | undefined;
 }

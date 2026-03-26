@@ -1,29 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { z } from "zod";
 
-// POST - Request password reset (verify email and send reset token)
+const postBodySchema = z.object({
+  email: z.string().email("Format email tidak valid").max(320),
+});
+
+// POST - Request password reset (tanpa membocorkan apakah email terdaftar)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email } = body;
-
-    if (!email) {
+    const json = await request.json();
+    const parsed = postBodySchema.safeParse(json);
+    if (!parsed.success) {
       return NextResponse.json(
         {
           success: false,
-          error: "Email harus diisi",
+          error: parsed.error.issues[0]?.message ?? "Data tidak valid",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Check if admin exists
+    const { email } = parsed.data;
+
     const admin = await prisma.admin.findUnique({
       where: { email },
     });
 
-    // Always return success to prevent email enumeration
     if (!admin) {
       return NextResponse.json({
         success: true,
@@ -31,18 +34,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // In production, you would:
-    // 1. Generate a secure reset token
-    // 2. Store it in database with expiry
-    // 3. Send email with reset link
-
-    // For now, we'll return a simple success message
-    // Since this is a demo without email service
+    // Produksi: token + email; saat ini hanya pesan generik (tanpa email service)
     return NextResponse.json({
       success: true,
       message: "Silakan hubungi administrator untuk reset password",
-      // In production, remove this hint
-      hint: "Demo mode: Contact admin to reset password",
     });
   } catch (error) {
     console.error("Error in forgot password:", error);
@@ -51,73 +46,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: "Terjadi kesalahan server",
       },
-      { status: 500 }
-    );
-  }
-}
-
-// PUT - Reset password with token
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { email, newPassword } = body;
-
-    if (!email || !newPassword) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Email dan password baru harus diisi",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (newPassword.length < 6) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Password minimal 6 karakter",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Find admin
-    const admin = await prisma.admin.findUnique({
-      where: { email },
-    });
-
-    if (!admin) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Email tidak ditemukan",
-        },
-        { status: 404 }
-      );
-    }
-
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password
-    await prisma.admin.update({
-      where: { email },
-      data: { password: hashedPassword },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: "Password berhasil direset",
-    });
-  } catch (error) {
-    console.error("Error resetting password:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Gagal mereset password",
-      },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
