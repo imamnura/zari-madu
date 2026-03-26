@@ -30,7 +30,9 @@ async function getArticles() {
 
     return articles.length > 0 ? articles : ARTICLES;
   } catch (error) {
-    console.error("Error fetching articles:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error fetching articles:", error);
+    }
     return ARTICLES;
   }
 }
@@ -123,13 +125,11 @@ export default async function ArticleDetailPage({
             )}
           </div>
 
-          {/* Article Content */}
-          <div className="prose prose-lg max-w-none mb-12">
-            <div
-              className="article-content"
-              dangerouslySetInnerHTML={{ __html: article.content }}
-            />
-          </div>
+          {/* Article Content — typography + daftar/heading (Tailwind preflight menonaktifkan list default) */}
+          <div
+            className="article-content prose prose-neutral prose-lg max-w-none mb-12 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:my-1 [&_h1]:text-3xl [&_h1]:font-bold [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:text-xl [&_h3]:font-semibold"
+            dangerouslySetInnerHTML={{ __html: article.content }}
+          />
 
           {/* CTA Box */}
           <div className="bg-gradient-to-r from-amber-50 to-amber-100 p-8 rounded-2xl border-2 border-amber-300 mb-12">
@@ -206,12 +206,4 @@ export default async function ArticleDetailPage({
       <Footer />
     </div>
   );
-}
-
-// Generate static params for all articles
-export async function generateStaticParams() {
-  const articles = await getArticles();
-  return articles.map((article: any) => ({
-    slug: article.slug,
-  }));
 }

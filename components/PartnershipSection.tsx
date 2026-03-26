@@ -43,7 +43,11 @@ export function PartnershipSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-20 lg:py-32 bg-white">
+    <section
+      id="partnership"
+      ref={ref}
+      className="py-20 lg:py-32 bg-white"
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

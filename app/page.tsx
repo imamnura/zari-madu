@@ -1,10 +1,10 @@
 import { LoadingProgress } from "@/components/LoadingProgress";
+import { HomeHashScroll } from "@/components/HomeHashScroll";
 import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { AboutSection } from "@/components/AboutSection";
-import { ProductLinesSection } from "@/components/ProductLinesSection";
 import { WhyChooseSection } from "@/components/WhyChooseSection";
-import { ProductShowcaseSection } from "@/components/ProductShowcaseSection";
+import { CollectionSection } from "@/components/CollectionSection";
 import { PartnershipSection } from "@/components/PartnershipSection";
 import { TestimonialsSection } from "@/components/TestimonialsSection";
 import { ArticlesSection } from "@/components/ArticlesSection";
@@ -41,13 +41,14 @@ export default function Home() {
       />
 
       <LoadingProgress />
+      <HomeHashScroll />
       <Header />
       <main>
         <HeroSection />
         <AboutSection />
         {/* <ProductLinesSection /> */}
         <WhyChooseSection />
-        <ProductShowcaseSection />
+        <CollectionSection />
         <PartnershipSection />
         <TestimonialsSection />
         <ArticlesSection />

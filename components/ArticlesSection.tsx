@@ -53,10 +53,12 @@ export function ArticlesSection() {
         });
         if (response.ok) {
           const data = await response.json();
-          // Only update if we have articles from the API
-          if (data.articles && data.articles.length > 0) {
-            setContent(data);
-          }
+          setContent({
+            heading: data.heading ?? "Artikel & Tips",
+            title: data.title ?? "",
+            description: data.description ?? "",
+            articles: Array.isArray(data.articles) ? data.articles : [],
+          });
         }
       } catch (error) {
         console.error("Error fetching articles content:", error);

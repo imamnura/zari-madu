@@ -30,7 +30,9 @@ async function getArticles() {
 
     return articles.length > 0 ? articles : ARTICLES;
   } catch (error) {
-    console.error("Error fetching articles:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Error fetching articles:", error);
+    }
     return ARTICLES;
   }
 }

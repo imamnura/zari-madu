@@ -23,7 +23,7 @@ interface Settings {
   whatsappOrderMessage?: string;
 }
 
-export function ProductShowcaseSection() {
+export function CollectionSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [collections, setCollections] = useState<HoneyCollection[]>([]);
@@ -31,7 +31,7 @@ export function ProductShowcaseSection() {
   const [loading, setLoading] = useState(true);
   const [sectionTitle, setSectionTitle] = useState("Koleksi Madu Premium");
   const [sectionDescription, setSectionDescription] = useState(
-    "Pilihan terbaik dari berbagai sumber nektar pilihan Indonesia"
+    "Pilihan terbaik dari berbagai sumber nektar pilihan Indonesia",
   );
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function ProductShowcaseSection() {
       try {
         // Fetch section content
         const contentResponse = await fetch(
-          "/api/admin/honey-collection-content"
+          "/api/admin/honey-collection-content",
         );
         const contentData = await contentResponse.json();
 
@@ -80,6 +80,13 @@ export function ProductShowcaseSection() {
       trackWhatsAppClick("order");
       openWhatsApp(settings.whatsapp, message);
     }
+  };
+
+  const convertToRupiah = (value: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+    }).format(value);
   };
 
   return (
@@ -153,7 +160,7 @@ export function ProductShowcaseSection() {
                       </p>
                       {product.price && (
                         <p className="text-amber-600 font-semibold mt-3">
-                          {product.price}
+                          {convertToRupiah(Number(product?.price))}
                         </p>
                       )}
                     </CardContent>
@@ -172,7 +179,7 @@ export function ProductShowcaseSection() {
               <Button
                 size="lg"
                 onClick={handleOrderClick}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all hover:cursor-pointer"
               >
                 Lihat Detail & Pesan Sekarang
               </Button>

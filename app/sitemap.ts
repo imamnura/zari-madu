@@ -1,55 +1,73 @@
 import { MetadataRoute } from "next";
+import { prisma } from "@/lib/prisma";
+import { ARTICLES } from "@/lib/constants";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://zarihoney.com";
+const baseUrl = "https://zarihoney.com";
 
-  // Get current date for lastModified
-  const currentDate = new Date();
+type ArticleRow = { slug: string };
 
-  return [
+async function getArticleSlugs(): Promise<{
+  slugs: ArticleRow[];
+  lastModified: Date;
+}> {
+  try {
+    const content = await prisma.articleContent.findFirst({
+      orderBy: { updatedAt: "desc" },
+    });
+    if (!content?.articles) {
+      return {
+        slugs: ARTICLES.map((a) => ({ slug: a.slug })),
+        lastModified: new Date(),
+      };
+    }
+    const articles =
+      typeof content.articles === "string"
+        ? JSON.parse(content.articles)
+        : content.articles;
+    if (!Array.isArray(articles) || articles.length === 0) {
+      return {
+        slugs: ARTICLES.map((a) => ({ slug: a.slug })),
+        lastModified: content.updatedAt,
+      };
+    }
+    return {
+      slugs: articles.map((a: { slug: string }) => ({ slug: a.slug })),
+      lastModified: content.updatedAt,
+    };
+  } catch {
+    return {
+      slugs: ARTICLES.map((a) => ({ slug: a.slug })),
+      lastModified: new Date(),
+    };
+  }
+}
+
+/** Sitemap untuk SEO — hanya URL kanonik (tanpa hash). */
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = new Date();
+  const { slugs, lastModified } = await getArticleSlugs();
+
+  const staticEntries: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
-      lastModified: currentDate,
+      lastModified: now,
       changeFrequency: "daily",
       priority: 1,
     },
     {
       url: `${baseUrl}/articles`,
-      lastModified: currentDate,
+      lastModified,
       changeFrequency: "daily",
-      priority: 0.8,
-    },
-    // Add dynamic article URLs here when you have articles
-    // You can fetch from database and generate dynamically
-    {
-      url: `${baseUrl}/#about`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
       priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/#honey-collection`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/#why-choose`,
-      lastModified: currentDate,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/#testimonials`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/#partnership`,
-      lastModified: currentDate,
-      changeFrequency: "monthly",
-      priority: 0.6,
     },
   ];
+
+  const articleEntries: MetadataRoute.Sitemap = slugs.map((a) => ({
+    url: `${baseUrl}/articles/${a.slug}`,
+    lastModified,
+    changeFrequency: "weekly",
+    priority: 0.75,
+  }));
+
+  return [...staticEntries, ...articleEntries];
 }

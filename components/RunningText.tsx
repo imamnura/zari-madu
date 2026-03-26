@@ -29,7 +29,7 @@ export function RunningText() {
             >
               {text}
             </span>
-          )
+          ),
         )}
       </motion.div>
     </div>

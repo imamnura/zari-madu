@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
 const navigation = [
   { name: "Tentang", href: "#about" },
   { name: "Koleksi", href: "#products" },
@@ -14,6 +14,8 @@ const navigation = [
 ];
 
 export function Header() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [siteName, setSiteName] = useState("Zari Honey");
@@ -42,26 +44,40 @@ export function Header() {
     fetchSiteName();
   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const goHome = () => {
     setMobileMenuOpen(false);
+    if (isHome) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.location.assign("/");
+    }
   };
 
+  /** Di beranda: scroll halus. Di halaman lain: navigasi ke `/#id` agar section ada di DOM. */
   const scrollToSection = (href: string) => {
     setMobileMenuOpen(false);
     if (href === "#") {
-      scrollToTop();
+      goHome();
       return;
     }
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
+    if (isHome) {
+      const element = document.querySelector(href);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+      return;
     }
+    window.location.assign(`/${href}`);
   };
+
+  const navLinkClass =
+    "text-sm font-semibold leading-6 text-gray-700 hover:text-amber-600 transition-colors";
+  const mobileNavLinkClass =
+    "block w-full text-left px-3 py-2 text-base font-semibold leading-7 text-gray-700 hover:bg-amber-50 rounded-md transition-colors";
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-[110] transition-all duration-300 ${
         scrolled ? "bg-white/95 backdrop-blur-md shadow-md" : "bg-transparent"
       }`}
     >
@@ -73,7 +89,8 @@ export function Header() {
           {/* Logo */}
           <div className="flex lg:flex-1">
             <button
-              onClick={scrollToTop}
+              type="button"
+              onClick={goHome}
               className="-m-1.5 p-1.5 cursor-pointer hover:opacity-80 transition-opacity"
             >
               <span className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-amber-600 to-amber-800 bg-clip-text text-transparent">
@@ -84,15 +101,26 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex lg:gap-x-8">
-            {navigation.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => scrollToSection(item.href)}
-                className="text-sm font-semibold leading-6 text-gray-700 hover:text-amber-600 transition-colors"
-              >
-                {item.name}
-              </button>
-            ))}
+            {navigation.map((item) =>
+              isHome ? (
+                <button
+                  key={item.name}
+                  type="button"
+                  onClick={() => scrollToSection(item.href)}
+                  className={navLinkClass}
+                >
+                  {item.name}
+                </button>
+              ) : (
+                <Link
+                  key={item.name}
+                  href={`/${item.href}`}
+                  className={navLinkClass}
+                >
+                  {item.name}
+                </Link>
+              ),
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -121,15 +149,27 @@ export function Header() {
             className="lg:hidden py-4 bg-white rounded-b-2xl shadow-lg"
           >
             <div className="space-y-2">
-              {navigation.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => scrollToSection(item.href)}
-                  className="block w-full text-left px-3 py-2 text-base font-semibold leading-7 text-gray-700 hover:bg-amber-50 rounded-md transition-colors"
-                >
-                  {item.name}
-                </button>
-              ))}
+              {navigation.map((item) =>
+                isHome ? (
+                  <button
+                    key={item.name}
+                    type="button"
+                    onClick={() => scrollToSection(item.href)}
+                    className={mobileNavLinkClass}
+                  >
+                    {item.name}
+                  </button>
+                ) : (
+                  <Link
+                    key={item.name}
+                    href={`/${item.href}`}
+                    className={mobileNavLinkClass}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
+                ),
+              )}
             </div>
           </motion.div>
         )}

@@ -100,25 +100,27 @@ export function AboutSection() {
         </div>
 
         {/* Enhanced Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="flex flex-wrap justify-evenly items-center gap-8">
           {stats.map((stat, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, scale: 0.5 }}
               animate={isInView ? { opacity: 1, scale: 1 } : {}}
               transition={{
-                delay: 0.3 + index * 0.1,
+                // delay: 0.3 + index * 0.1,
+                delay: 0,
                 duration: 0.5,
                 type: "spring",
               }}
               whileHover={{ scale: 1.05, y: -10 }}
-              className="text-center p-6 rounded-2xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-amber-100 hover:border-amber-300"
+              className="text-center p-6 rounded-2xl bg-white shadow-lg hover:shadow-2xl transition-all duration-100 border-2 border-amber-100 hover:border-amber-300 w-[280px] h-[148px]"
             >
               <motion.div
                 initial={{ scale: 0 }}
                 animate={isInView ? { scale: 1 } : {}}
                 transition={{
-                  delay: 0.5 + index * 0.1,
+                  // delay: 0.5 + index * 0.1,
+                  delay: 0,
                   duration: 0.5,
                   type: "spring",
                 }}

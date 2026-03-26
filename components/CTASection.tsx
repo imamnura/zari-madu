@@ -54,7 +54,7 @@ export function CTASection() {
         duration: 3 + (i % 3),
         delay: (i % 5) * 0.4,
       })),
-    []
+    [],
   );
 
   const handleOrderClick = () => {
