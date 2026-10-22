@@ -99,7 +99,7 @@ These items were intentionally left for the operator / next iteration:
 2. **Cron scheduler wiring** — `/api/cron/expire-pending-orders` is built, but no Vercel Cron / external scheduler is wired. Set up an hourly call once deployed.
 3. **Next 16 middleware → proxy rename** — Next 16 warns: `"middleware" file convention is deprecated. Please use "proxy" instead.` Pure rename when needed.
 4. **vitest full-suite OOM tail** — split into per-directory runs in CI to avoid.
-5. **No commits yet** — all wave 1-8 changes are still in the working tree (`develop-nextjs`). Recommended commit grouping is in the kitflow report below.
+5. **No commits yet** — all wave 1-8 changes are still in the working tree (`develop-nextjs`). Recommended commit grouping is in the  report below.
 
 ## Out-of-scope (per SPEC §3 and §14)
 
@@ -153,12 +153,12 @@ git commit -m "feat(admin): orders / categories / shipping-rates pages + dashboa
 git add middleware.ts components/SessionProviderWrapper.tsx app/layout.tsx components/Header.tsx app/sitemap.ts components/admin/AdminSidebar.tsx
 git commit -m "feat(shop): middleware role gates + SessionProvider/CartProvider mount + Header CartIcon + sitemap + admin sidebar"
 
-# 8. kitflow artifacts
-git add .kitflow/
-git commit -m "chore(kitflow): archive customer-shop-checkout spec"
+# 8.  artifacts
+git add ./
+git commit -m "chore(): archive customer-shop-checkout spec"
 ```
 
-(Or one big commit if you prefer — the kitflow archive lives in `.kitflow/artifacts/archive/2026-05-11-customer-shop-checkout/`.)
+(Or one big commit if you prefer — the  archive lives in `./artifacts/archive/2026-05-11-customer-shop-checkout/`.)
 
 ### B. Stray file
 `migrate.log` was written during the migration troubleshooting in wave 2. Either delete it or add to `.gitignore`.
@@ -169,7 +169,7 @@ Branch: `develop-nextjs`. Remote: `git@github.com:imamnura/zari-madu.git`. Targe
 When ready:
 ```bash
 git push origin develop-nextjs
-gh pr create --base master --head develop-nextjs --title "feat: customer shop, cart & checkout" --body "$(cat .kitflow/artifacts/archive/2026-05-11-customer-shop-checkout/COMPLETION_SUMMARY.md)"
+gh pr create --base master --head develop-nextjs --title "feat: customer shop, cart & checkout" --body "$(cat ./artifacts/archive/2026-05-11-customer-shop-checkout/COMPLETION_SUMMARY.md)"
 ```
 
 I deliberately did NOT push or open a PR — those are decisions you should make explicitly. Reply `push` or `pr` and I'll do them on your authorization.

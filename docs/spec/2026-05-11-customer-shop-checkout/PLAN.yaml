@@ -7,7 +7,7 @@ generated_at: "2026-05-11"
 # -----------------------------------------------------------------------------
 # Stack-adapted layering
 # -----------------------------------------------------------------------------
-# Default kitflow layering (Bluebird: src/types → src/services → src/store → hooks
+# Default  layering (Bluebird: src/types → src/services → src/store → hooks
 # → components → pages) is adapted to this codebase which is:
 #   - Next.js 16 App Router (file-based routing — no `src/routes/route.ts`)
 #   - No axios; uses native fetch + Server Components/Server Actions/Route Handlers
@@ -17,7 +17,7 @@ generated_at: "2026-05-11"
 #   - **No test runner currently configured.** A Layer-0 task installs Vitest +
 #     RTL + setup so paired test tasks (template-required) become runnable.
 #     If the user decides to defer tests, they can mark all `type: test` tasks
-#     skipped during /kitflow:implement.
+#     skipped during /:implement.
 # -----------------------------------------------------------------------------
 
 layers:

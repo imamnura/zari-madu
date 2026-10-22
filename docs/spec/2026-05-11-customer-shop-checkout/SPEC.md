@@ -297,4 +297,4 @@ Midtrans is invoked over plain `fetch` — no SDK added. Existing deps already c
 
 ---
 
-_Next step: `/kitflow:plan` will turn this into a bottom-up PLAN.yaml with REQ-traced tasks (types → migrations → services → store → hooks → components → pages → admin)._
+_Next step: `/:plan` will turn this into a bottom-up PLAN.yaml with REQ-traced tasks (types → migrations → services → store → hooks → components → pages → admin)._

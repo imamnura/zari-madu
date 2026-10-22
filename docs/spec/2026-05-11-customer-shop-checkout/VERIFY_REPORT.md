@@ -171,4 +171,4 @@ The IMPLEMENT phase produced a working e-commerce subsystem on top of the existi
 
 **Verification status: PASS (with the caveats listed above).**
 
-Next step: `/kitflow:complete` to archive the spec and optionally cut a PR.
+Next step: `/:complete` to archive the spec and optionally cut a PR.

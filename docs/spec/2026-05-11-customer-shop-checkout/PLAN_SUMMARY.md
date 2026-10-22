@@ -11,9 +11,9 @@
 
 ## Stack-adapted layering
 
-Kitflow's default template assumes the Bluebird stack (`src/types/...`, `src/services/axiosInstance`, Zustand, `src/routes/route.ts`). This codebase is **Next.js 16 App Router + Prisma + NextAuth** with a flat layout. The plan adapts as follows:
+default template assumes the Bluebird stack (`src/types/...`, `src/services/axiosInstance`, Zustand, `src/routes/route.ts`). This codebase is **Next.js 16 App Router + Prisma + NextAuth** with a flat layout. The plan adapts as follows:
 
-| Kitflow default | This plan |
+|  default | This plan |
 |---|---|
 | `src/types/` | `types/` (no `src/`) |
 | `src/services/` (axios) | `lib/*` server helpers + `app/api/*` route handlers (native fetch) |
@@ -25,7 +25,7 @@ Kitflow's default template assumes the Bluebird stack (`src/types/...`, `src/ser
 
 ## Tests
 
-The repo currently has **no test runner** (no Vitest / Jest / Playwright in `package.json`). **TASK-006** installs Vitest + RTL + jsdom + jest-dom and is a Layer-0 dependency for every other `type: test` task. If you want to defer all tests, mark them skipped during `/kitflow:implement` — they are paired (each `*T` task `depends_on: [TASK-006, <its impl>]`) so removal is mechanical.
+The repo currently has **no test runner** (no Vitest / Jest / Playwright in `package.json`). **TASK-006** installs Vitest + RTL + jsdom + jest-dom and is a Layer-0 dependency for every other `type: test` task. If you want to defer all tests, mark them skipped during `/:implement` — they are paired (each `*T` task `depends_on: [TASK-006, <its impl>]`) so removal is mechanical.
 
 ## Layer breakdown
 
@@ -72,7 +72,7 @@ Four modals exist; each has a single owner to avoid the "two parents mount the s
 - ✓ Pages are last (L6 + L7)
 - ✓ Each modal has exactly one owner
 
-## Open items the user should review before `/kitflow:implement`
+## Open items the user should review before `/:implement`
 
 1. **Tests deferred?** TASK-006 installs Vitest; if you want zero tests in v1, delete all `*T` tasks from `execution_order`. The impl plan stays valid.
 2. **New deps:** the plan adds `resend`, `@radix-ui/react-select`. Confirm before install.
@@ -82,4 +82,4 @@ Four modals exist; each has a single owner to avoid the "two parents mount the s
 
 ---
 
-**Next step:** `/kitflow:implement` to execute wave 1.
+**Next step:** `/:implement` to execute wave 1.
