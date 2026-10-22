@@ -1,0 +1,1695 @@
+spec_id: "2026-05-11-customer-shop-checkout"
+feature_name: "Customer Shop, Cart & Checkout"
+mode: BROWNFIELD
+complexity: COMPLEX
+generated_at: "2026-05-11"
+
+# -----------------------------------------------------------------------------
+# Stack-adapted layering
+# -----------------------------------------------------------------------------
+# Default kitflow layering (Bluebird: src/types → src/services → src/store → hooks
+# → components → pages) is adapted to this codebase which is:
+#   - Next.js 16 App Router (file-based routing — no `src/routes/route.ts`)
+#   - No axios; uses native fetch + Server Components/Server Actions/Route Handlers
+#     → no `src/utils/axiosInstance.ts` task
+#   - No Zustand; client state is React Context (cart) + URL state (filters)
+#   - Root-level `app/`, `components/`, `lib/`, `prisma/`, `types/` (no `src/`)
+#   - **No test runner currently configured.** A Layer-0 task installs Vitest +
+#     RTL + setup so paired test tasks (template-required) become runnable.
+#     If the user decides to defer tests, they can mark all `type: test` tasks
+#     skipped during /kitflow:implement.
+# -----------------------------------------------------------------------------
+
+layers:
+  - L0_foundation   # schema, types, test infra
+  - L1_libs         # server-side helpers (auth, midtrans, email, cart, validators)
+  - L2_ui_primitives # missing shadcn primitives (input/select/sheet/toaster)
+  - L3_api          # Next.js route handlers under app/api/
+  - L4_client_state # React Context provider + hooks (cart, filters)
+  - L5_components   # Shop / Cart / Checkout / Account / Admin components
+  - L6_pages        # App Router pages
+  - L7_integration  # cross-cutting modifications to existing files
+
+tasks:
+  # =====================================================================
+  # LAYER 0 — Foundation
+  # =====================================================================
+
+  - id: TASK-001
+    layer: L0_foundation
+    type: impl
+    title: Extend Prisma schema with e-commerce models
+    file: prisma/schema.prisma
+    req: [REQ-CAT-001, REQ-CAT-002, REQ-AUTH-001, REQ-CART-001, REQ-ORD-001, REQ-ORD-002, REQ-PAY-003, REQ-ADDR-001, REQ-ADM-005]
+    depends_on: []
+    notes: |
+      Add models: Customer, Category, Address, Cart, CartItem, Order, OrderItem,
+      Payment, ShippingRate. Extend PremiumHoneyCollection with categoryId, slug,
+      stock, alwaysAvailable, priceNumeric, weightGrams. OrderItem.productId is
+      nullable with onDelete: SetNull to preserve snapshot. Add enums:
+      Role, OrderStatus, PaymentStatus.
+
+  - id: TASK-002
+    layer: L0_foundation
+    type: impl
+    title: Create and run Prisma migration `add_ecommerce_models`
+    file: prisma/migrations/*_add_ecommerce_models/migration.sql
+    req: [REQ-CAT-001, REQ-CAT-002, REQ-AUTH-001, REQ-CART-001, REQ-ORD-001, REQ-PAY-003, REQ-ADM-005]
+    depends_on: [TASK-001]
+
+  - id: TASK-003
+    layer: L0_foundation
+    type: impl
+    title: Update seed.ts — backfill existing products, default category, sample shipping rates
+    file: prisma/seed.ts
+    req: [REQ-CAT-002, REQ-ADM-005]
+    depends_on: [TASK-002]
+    notes: |
+      For each existing PremiumHoneyCollection row: derive slug from name,
+      parse priceNumeric from price string, assign to "Madu Premium" default
+      category. Seed 5 sample ShippingRate rows (Jakarta, Jawa Barat, Jawa Tengah,
+      Jawa Timur, Banten). Idempotent.
+
+  - id: TASK-004
+    layer: L0_foundation
+    type: impl
+    title: Shared TypeScript types for shop domain
+    file: types/shop.ts
+    req: [REQ-CAT-001, REQ-CART-001, REQ-ORD-001, REQ-PAY-003]
+    depends_on: []
+    notes: |
+      Export: Product, Category, CartView, CartItemView, OrderView, OrderItemView,
+      AddressInput, GuestCheckoutInput, FilterParams, SortOption, OrderStatus,
+      PaymentStatus, Province enum/union.
+
+  - id: TASK-005
+    layer: L0_foundation
+    type: impl
+    title: Extend NextAuth type augmentation with `role`
+    file: types/next-auth.d.ts
+    req: [REQ-AUTH-003]
+    depends_on: []
+    notes: |
+      Augment Session.user and JWT with `role: "admin" | "customer"`.
+
+  - id: TASK-006
+    layer: L0_foundation
+    type: impl
+    title: Install and configure Vitest + React Testing Library
+    file: vitest.config.ts
+    req: []
+    depends_on: []
+    notes: |
+      Adds vitest, @vitest/ui, @testing-library/react, @testing-library/jest-dom,
+      jsdom to devDependencies. Creates vitest.config.ts (jsdom env, path
+      aliases) and vitest.setup.ts (jest-dom matchers). Adds `test` and
+      `test:watch` to package.json scripts. **Without this task, all paired
+      `type: test` tasks below are blocked.**
+
+  # =====================================================================
+  # LAYER 1 — Server-side libraries (lib/)
+  # =====================================================================
+
+  - id: TASK-007
+    layer: L1_libs
+    type: impl
+    title: Extend lib/auth.ts — Customer Credentials + Google OAuth + role claim
+    file: lib/auth.ts
+    req: [REQ-AUTH-002, REQ-AUTH-003, REQ-AUTH-007]
+    depends_on: [TASK-002, TASK-005]
+    notes: |
+      Add a SECOND Credentials provider keyed off the Customer table (id:
+      "customer-credentials") and a Google provider. Existing admin Credentials
+      provider (id: "admin-credentials") stays untouched. JWT/session callback
+      sets `role` from whichever provider authorized. authorize() for customer
+      checks bcryptjs against Customer.passwordHash.
+
+  - id: TASK-007T
+    layer: L1_libs
+    type: test
+    title: Test customer credentials authorize + role propagation
+    file: lib/auth.test.ts
+    req: [REQ-AUTH-002, REQ-AUTH-003]
+    depends_on: [TASK-006, TASK-007]
+
+  - id: TASK-008
+    layer: L1_libs
+    type: impl
+    title: Midtrans Snap client + signature verification helper
+    file: lib/midtrans.ts
+    req: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-004]
+    depends_on: []
+    notes: |
+      Two exports:
+        - createSnapTransaction({ orderId, grossAmount, customerDetails,
+          itemDetails }) → POSTs to https://app.sandbox.midtrans.com/snap/v1/transactions
+          with Basic auth (server key). Returns { token, redirectUrl }.
+        - verifyNotificationSignature(notif) → sha512(order_id + status_code +
+          gross_amount + server_key) === notif.signature_key.
+      Uses native fetch; no SDK. Reads MIDTRANS_IS_PRODUCTION to switch base URL.
+
+  - id: TASK-008T
+    layer: L1_libs
+    type: test
+    title: Test signature verification + snap payload shape
+    file: lib/midtrans.test.ts
+    req: [REQ-PAY-002, REQ-PAY-004]
+    depends_on: [TASK-006, TASK-008]
+    notes: |
+      Use Midtrans-documented signature sample as fixture. Mock fetch for
+      createSnapTransaction; assert auth header is Base64(serverKey + ":").
+
+  - id: TASK-009
+    layer: L1_libs
+    type: impl
+    title: Resend email client + order-confirmation / shipped templates
+    file: lib/email.ts
+    req: [REQ-NTF-001, REQ-NTF-002, REQ-NTF-003]
+    depends_on: [TASK-004]
+    notes: |
+      Exports: sendOrderConfirmationEmail(order), sendOrderShippedEmail(order).
+      Reads RESEND_API_KEY, EMAIL_FROM. Failures logged via console.error and
+      swallowed (do not throw — REQ-NTF-003). Templates inline (no react-email
+      to keep deps small) but well-formatted HTML.
+
+  - id: TASK-009T
+    layer: L1_libs
+    type: test
+    title: Test email template renders and swallows API failure
+    file: lib/email.test.ts
+    req: [REQ-NTF-001, REQ-NTF-003]
+    depends_on: [TASK-006, TASK-009]
+
+  - id: TASK-010
+    layer: L1_libs
+    type: impl
+    title: Cart utilities — guest session cookie + merge logic
+    file: lib/cart.ts
+    req: [REQ-CART-002, REQ-CART-003, REQ-CART-006]
+    depends_on: [TASK-002, TASK-004]
+    notes: |
+      Exports:
+        - getOrCreateGuestSessionToken() — sets HTTP-only cookie zari_cart_sid.
+        - resolveCart({ session }) — returns Cart row for either customerId or
+          sessionToken; creates empty cart lazily.
+        - mergeGuestCartIntoCustomer({ guestItems, customerId }) — runs in a
+          $transaction, sums quantities per productId capped at product.stock
+          (drops items if stock=0 && !alwaysAvailable). Returns the merged cart
+          + a list of dropped items for toast.
+
+  - id: TASK-010T
+    layer: L1_libs
+    type: test
+    title: Test cart merge — sum quantities, cap at stock, drop OOS items
+    file: lib/cart.test.ts
+    req: [REQ-CART-003, REQ-CART-006]
+    depends_on: [TASK-006, TASK-010]
+
+  - id: TASK-011
+    layer: L1_libs
+    type: impl
+    title: Order number generator
+    file: lib/orderNumber.ts
+    req: [REQ-ORD-001]
+    depends_on: [TASK-002]
+    notes: |
+      Format: ZH-YYYYMMDD-NNNN. NNNN is 1-based count of orders created on the
+      same date (using Prisma countOrdersOnDate). Race-safe by re-trying on
+      unique violation up to 5 times.
+
+  - id: TASK-011T
+    layer: L1_libs
+    type: test
+    title: Test order number format + collision retry
+    file: lib/orderNumber.test.ts
+    req: [REQ-ORD-001]
+    depends_on: [TASK-006, TASK-011]
+
+  - id: TASK-012
+    layer: L1_libs
+    type: impl
+    title: Shipping fee resolver
+    file: lib/shipping.ts
+    req: [REQ-ADM-005, REQ-CHK-004]
+    depends_on: [TASK-002, TASK-004]
+    notes: |
+      Exports resolveShippingFee(province) → { fee, estimatedDays } or null.
+      Province not configured → returns null; checkout caller surfaces the
+      "belum tersedia" error.
+
+  - id: TASK-012T
+    layer: L1_libs
+    type: test
+    title: Test shipping resolver returns null for unconfigured province
+    file: lib/shipping.test.ts
+    req: [REQ-ADM-005]
+    depends_on: [TASK-006, TASK-012]
+
+  - id: TASK-013
+    layer: L1_libs
+    type: impl
+    title: Zod schemas — auth, checkout, address
+    file: lib/schemas/shop.ts
+    req: [REQ-AUTH-006, REQ-CHK-005, REQ-ADDR-001]
+    depends_on: [TASK-004]
+    notes: |
+      Extends existing lib/schema.ts pattern. Exports: registerSchema,
+      loginCustomerSchema, addressSchema (with kelurahan/kecamatan/etc.),
+      checkoutSchema, guestCheckoutSchema, adminOrderTransitionSchema. Phone
+      regex `^(\+62|62|0)8\d{8,11}$`, postal code 5 digits.
+
+  - id: TASK-013T
+    layer: L1_libs
+    type: test
+    title: Test zod schemas accept valid + reject invalid Indonesian inputs
+    file: lib/schemas/shop.test.ts
+    req: [REQ-CHK-005]
+    depends_on: [TASK-006, TASK-013]
+
+  - id: TASK-014
+    layer: L1_libs
+    type: impl
+    title: Order/checkout service — atomic stock decrement + order create
+    file: lib/orders.ts
+    req: [REQ-CHK-006, REQ-CHK-007, REQ-PAY-004]
+    depends_on: [TASK-010, TASK-011, TASK-012]
+    notes: |
+      Exports:
+        - createOrderAndReserveStock({ cart, address, contact, shippingFee }) —
+          single $transaction: validates stock, decrements stock, creates Order
+          + OrderItems with snapshots, generates orderNumber. Throws
+          OutOfStockError listing offending items.
+        - restoreOrderStock(orderId) — used by webhook on expire/cancel/deny/failure
+          and admin-cancel of unfulfilled orders. Idempotent (no-op if already
+          restored — marker on Order).
+
+  - id: TASK-014T
+    layer: L1_libs
+    type: test
+    title: Test concurrent checkouts cannot oversell stock
+    file: lib/orders.test.ts
+    req: [REQ-CHK-007]
+    depends_on: [TASK-006, TASK-014]
+
+  # =====================================================================
+  # LAYER 2 — Missing UI primitives
+  # =====================================================================
+
+  - id: TASK-015
+    layer: L2_ui_primitives
+    type: impl
+    title: shadcn Input primitive
+    file: components/ui/input.tsx
+    req: []
+    depends_on: []
+    notes: Standard shadcn pattern. Forwarded ref. Used by every form.
+
+  - id: TASK-015T
+    layer: L2_ui_primitives
+    type: test
+    title: Test Input renders + forwards ref
+    file: components/ui/input.test.tsx
+    req: []
+    depends_on: [TASK-006, TASK-015]
+
+  - id: TASK-016
+    layer: L2_ui_primitives
+    type: impl
+    title: shadcn Select primitive (Radix-backed)
+    file: components/ui/select.tsx
+    req: [REQ-FLT-002, REQ-CHK-002]
+    depends_on: []
+    notes: |
+      Requires new dep @radix-ui/react-select. Used by FilterSidebar (sort) and
+      AddressForm (province).
+
+  - id: TASK-016T
+    layer: L2_ui_primitives
+    type: test
+    title: Test Select open/select interaction
+    file: components/ui/select.test.tsx
+    req: []
+    depends_on: [TASK-006, TASK-016]
+
+  - id: TASK-017
+    layer: L2_ui_primitives
+    type: impl
+    title: shadcn Sheet primitive (Radix Dialog variant)
+    file: components/ui/sheet.tsx
+    req: [REQ-CART-004, REQ-FLT-004]
+    depends_on: []
+    notes: |
+      Reuses existing @radix-ui/react-dialog. Side variants: right (cart),
+      left (mobile filter).
+
+  - id: TASK-017T
+    layer: L2_ui_primitives
+    type: test
+    title: Test Sheet open/close + side variants
+    file: components/ui/sheet.test.tsx
+    req: []
+    depends_on: [TASK-006, TASK-017]
+
+  - id: TASK-018
+    layer: L2_ui_primitives
+    type: impl
+    title: Sonner Toaster mount component
+    file: components/ui/sonner.tsx
+    req: []
+    depends_on: []
+    notes: |
+      Wraps sonner Toaster with project theme. Mounted in app/layout.tsx
+      (TASK-079).
+
+  # =====================================================================
+  # LAYER 3 — API route handlers
+  # =====================================================================
+  # All follow existing convention: auth() guard where applicable, response
+  # shape { success, data?, message?, error? }, zod validation, Prisma direct.
+
+  - id: TASK-019
+    layer: L3_api
+    type: impl
+    title: Public products list endpoint
+    file: app/api/products/route.ts
+    req: [REQ-CAT-003, REQ-FLT-001, REQ-FLT-002, REQ-FLT-003, REQ-FLT-005]
+    depends_on: [TASK-004, TASK-013]
+
+  - id: TASK-019T
+    layer: L3_api
+    type: test
+    title: Test products list filters/sorts/paginates
+    file: app/api/products/route.test.ts
+    req: [REQ-FLT-001, REQ-FLT-002]
+    depends_on: [TASK-006, TASK-019]
+
+  - id: TASK-020
+    layer: L3_api
+    type: impl
+    title: Public product detail endpoint
+    file: app/api/products/[slug]/route.ts
+    req: [REQ-CAT-005]
+    depends_on: [TASK-004]
+
+  - id: TASK-020T
+    layer: L3_api
+    type: test
+    title: Test product detail 404 + happy path
+    file: app/api/products/[slug]/route.test.ts
+    req: [REQ-CAT-005]
+    depends_on: [TASK-006, TASK-020]
+
+  - id: TASK-021
+    layer: L3_api
+    type: impl
+    title: Public categories list endpoint
+    file: app/api/categories/route.ts
+    req: [REQ-CAT-001, REQ-FLT-001]
+    depends_on: [TASK-004]
+
+  - id: TASK-021T
+    layer: L3_api
+    type: test
+    title: Test categories sorted by displayOrder
+    file: app/api/categories/route.test.ts
+    req: [REQ-CAT-001]
+    depends_on: [TASK-006, TASK-021]
+
+  - id: TASK-022
+    layer: L3_api
+    type: impl
+    title: Customer registration endpoint (with Turnstile)
+    file: app/api/auth/customer/register/route.ts
+    req: [REQ-AUTH-001, REQ-AUTH-006]
+    depends_on: [TASK-013, TASK-002]
+    notes: |
+      Verifies Turnstile token via existing lib/turnstile.ts. Hashes password
+      with bcryptjs. 409 on duplicate email.
+
+  - id: TASK-022T
+    layer: L3_api
+    type: test
+    title: Test register rejects bad captcha, dup email, weak password
+    file: app/api/auth/customer/register/route.test.ts
+    req: [REQ-AUTH-006]
+    depends_on: [TASK-006, TASK-022]
+
+  - id: TASK-023
+    layer: L3_api
+    type: impl
+    title: Cart fetch endpoint (guest + customer)
+    file: app/api/cart/route.ts
+    req: [REQ-CART-001, REQ-CART-002]
+    depends_on: [TASK-010]
+
+  - id: TASK-023T
+    layer: L3_api
+    type: test
+    title: Test cart resolves customerId vs sessionToken correctly
+    file: app/api/cart/route.test.ts
+    req: [REQ-CART-002]
+    depends_on: [TASK-006, TASK-023]
+
+  - id: TASK-024
+    layer: L3_api
+    type: impl
+    title: Cart add-item endpoint
+    file: app/api/cart/items/route.ts
+    req: [REQ-CART-005, REQ-CART-006]
+    depends_on: [TASK-010]
+
+  - id: TASK-024T
+    layer: L3_api
+    type: test
+    title: Test add-item enforces stock limit
+    file: app/api/cart/items/route.test.ts
+    req: [REQ-CART-006]
+    depends_on: [TASK-006, TASK-024]
+
+  - id: TASK-025
+    layer: L3_api
+    type: impl
+    title: Cart item update/delete endpoint
+    file: app/api/cart/items/[id]/route.ts
+    req: [REQ-CART-005]
+    depends_on: [TASK-010]
+
+  - id: TASK-025T
+    layer: L3_api
+    type: test
+    title: Test cart item PATCH/DELETE auth boundary
+    file: app/api/cart/items/[id]/route.test.ts
+    req: [REQ-CART-005]
+    depends_on: [TASK-006, TASK-025]
+
+  - id: TASK-026
+    layer: L3_api
+    type: impl
+    title: Cart merge endpoint (called on login)
+    file: app/api/cart/merge/route.ts
+    req: [REQ-CART-003]
+    depends_on: [TASK-010]
+
+  - id: TASK-026T
+    layer: L3_api
+    type: test
+    title: Test cart merge endpoint integration
+    file: app/api/cart/merge/route.test.ts
+    req: [REQ-CART-003]
+    depends_on: [TASK-006, TASK-026]
+
+  - id: TASK-027
+    layer: L3_api
+    type: impl
+    title: Checkout endpoint — creates order, reserves stock, returns Snap token
+    file: app/api/checkout/route.ts
+    req: [REQ-CHK-002, REQ-CHK-003, REQ-CHK-006, REQ-CHK-007, REQ-PAY-002]
+    depends_on: [TASK-008, TASK-014, TASK-013, TASK-012]
+    notes: |
+      Accepts both guest and authenticated payloads (discriminated by session).
+      Sequence: validate input → resolve shipping → createOrderAndReserveStock →
+      createSnapTransaction → persist Payment(snapToken) → return { orderId,
+      snapToken }. On Midtrans failure, rolls back stock and order (sets order
+      CANCELLED with reason "payment_init_failed").
+
+  - id: TASK-027T
+    layer: L3_api
+    type: test
+    title: Test checkout rolls back on Midtrans failure
+    file: app/api/checkout/route.test.ts
+    req: [REQ-CHK-007, REQ-PAY-002]
+    depends_on: [TASK-006, TASK-027]
+
+  - id: TASK-028
+    layer: L3_api
+    type: impl
+    title: Midtrans notification webhook (idempotent, signature-verified)
+    file: app/api/payment/midtrans/notification/route.ts
+    req: [REQ-PAY-004, REQ-NTF-001]
+    depends_on: [TASK-008, TASK-009, TASK-014]
+    notes: |
+      Verify signature → upsert Payment by transaction_id + status (unique
+      compound). On settlement: Order.status=PAID, paidAt=now, trigger
+      sendOrderConfirmationEmail. On expire/cancel/deny/failure: Order.status=
+      CANCELLED, restoreOrderStock. Idempotent on replay (skip if Payment row
+      with same status already exists).
+
+  - id: TASK-028T
+    layer: L3_api
+    type: test
+    title: Test webhook signature, idempotency, stock restore on expire
+    file: app/api/payment/midtrans/notification/route.test.ts
+    req: [REQ-PAY-004]
+    depends_on: [TASK-006, TASK-028]
+
+  - id: TASK-029
+    layer: L3_api
+    type: impl
+    title: Payment retry endpoint — re-issue Snap token for PENDING order
+    file: app/api/payment/midtrans/retry/route.ts
+    req: [REQ-PAY-006]
+    depends_on: [TASK-008]
+
+  - id: TASK-029T
+    layer: L3_api
+    type: test
+    title: Test retry rejects non-PENDING orders
+    file: app/api/payment/midtrans/retry/route.test.ts
+    req: [REQ-PAY-006]
+    depends_on: [TASK-006, TASK-029]
+
+  - id: TASK-030
+    layer: L3_api
+    type: impl
+    title: Customer order list endpoint
+    file: app/api/orders/route.ts
+    req: [REQ-ORD-003]
+    depends_on: [TASK-002]
+
+  - id: TASK-030T
+    layer: L3_api
+    type: test
+    title: Test order list scoped to current customer only
+    file: app/api/orders/route.test.ts
+    req: [REQ-ORD-003]
+    depends_on: [TASK-006, TASK-030]
+
+  - id: TASK-031
+    layer: L3_api
+    type: impl
+    title: Order detail endpoint (customer OR guest-by-email)
+    file: app/api/orders/[id]/route.ts
+    req: [REQ-ORD-004]
+    depends_on: [TASK-002]
+
+  - id: TASK-031T
+    layer: L3_api
+    type: test
+    title: Test order detail rejects mismatched email for guest
+    file: app/api/orders/[id]/route.test.ts
+    req: [REQ-ORD-004, REQ-ORD-005]
+    depends_on: [TASK-006, TASK-031]
+
+  - id: TASK-032
+    layer: L3_api
+    type: impl
+    title: Guest order tracking endpoint
+    file: app/api/orders/track/route.ts
+    req: [REQ-ORD-005]
+    depends_on: [TASK-002]
+    notes: |
+      POST { orderNumber, email }. Returns generic "Order not found or email
+      does not match" on mismatch (prevent enumeration).
+
+  - id: TASK-032T
+    layer: L3_api
+    type: test
+    title: Test guest tracking generic error on email mismatch
+    file: app/api/orders/track/route.test.ts
+    req: [REQ-ORD-005]
+    depends_on: [TASK-006, TASK-032]
+
+  - id: TASK-033
+    layer: L3_api
+    type: impl
+    title: Customer address book endpoints (list + create)
+    file: app/api/account/addresses/route.ts
+    req: [REQ-ADDR-001, REQ-ADDR-002]
+    depends_on: [TASK-013]
+
+  - id: TASK-033T
+    layer: L3_api
+    type: test
+    title: Test setting one address as default unsets others
+    file: app/api/account/addresses/route.test.ts
+    req: [REQ-ADDR-002]
+    depends_on: [TASK-006, TASK-033]
+
+  - id: TASK-034
+    layer: L3_api
+    type: impl
+    title: Customer address book endpoints (update + delete)
+    file: app/api/account/addresses/[id]/route.ts
+    req: [REQ-ADDR-002]
+    depends_on: [TASK-013]
+
+  - id: TASK-034T
+    layer: L3_api
+    type: test
+    title: Test address ownership check
+    file: app/api/account/addresses/[id]/route.test.ts
+    req: [REQ-ADDR-002]
+    depends_on: [TASK-006, TASK-034]
+
+  - id: TASK-035
+    layer: L3_api
+    type: impl
+    title: Admin orders list endpoint
+    file: app/api/admin/orders/route.ts
+    req: [REQ-ADM-001]
+    depends_on: [TASK-002]
+
+  - id: TASK-035T
+    layer: L3_api
+    type: test
+    title: Test admin-only access + filters/pagination
+    file: app/api/admin/orders/route.test.ts
+    req: [REQ-ADM-001]
+    depends_on: [TASK-006, TASK-035]
+
+  - id: TASK-036
+    layer: L3_api
+    type: impl
+    title: Admin order detail + status transition endpoint
+    file: app/api/admin/orders/[id]/route.ts
+    req: [REQ-ADM-002, REQ-NTF-002]
+    depends_on: [TASK-009, TASK-013, TASK-014]
+    notes: |
+      PATCH validates state machine (PENDING→PAID is webhook-only; admin can
+      PAID→SHIPPED with trackingNumber+courier required, SHIPPED→DELIVERED,
+      *→CANCELLED with reason; cancelling pre-shipment restores stock). On
+      SHIPPED, calls sendOrderShippedEmail.
+
+  - id: TASK-036T
+    layer: L3_api
+    type: test
+    title: Test admin status machine — illegal transitions rejected
+    file: app/api/admin/orders/[id]/route.test.ts
+    req: [REQ-ADM-002]
+    depends_on: [TASK-006, TASK-036]
+
+  - id: TASK-037
+    layer: L3_api
+    type: impl
+    title: Admin categories CRUD endpoints
+    file: app/api/admin/categories/route.ts
+    req: [REQ-ADM-003]
+    depends_on: [TASK-013]
+
+  - id: TASK-037T
+    layer: L3_api
+    type: test
+    title: Test category slug uniqueness + delete-with-products guard
+    file: app/api/admin/categories/route.test.ts
+    req: [REQ-ADM-003]
+    depends_on: [TASK-006, TASK-037]
+
+  - id: TASK-038
+    layer: L3_api
+    type: impl
+    title: Admin category update/delete endpoints
+    file: app/api/admin/categories/[id]/route.ts
+    req: [REQ-ADM-003]
+    depends_on: [TASK-013]
+
+  - id: TASK-038T
+    layer: L3_api
+    type: test
+    title: Test category update/delete authorization
+    file: app/api/admin/categories/[id]/route.test.ts
+    req: [REQ-ADM-003]
+    depends_on: [TASK-006, TASK-038]
+
+  - id: TASK-039
+    layer: L3_api
+    type: impl
+    title: Admin shipping rates CRUD endpoints
+    file: app/api/admin/shipping-rates/route.ts
+    req: [REQ-ADM-005]
+    depends_on: [TASK-013]
+
+  - id: TASK-039T
+    layer: L3_api
+    type: test
+    title: Test shipping rate province uniqueness
+    file: app/api/admin/shipping-rates/route.test.ts
+    req: [REQ-ADM-005]
+    depends_on: [TASK-006, TASK-039]
+
+  - id: TASK-040
+    layer: L3_api
+    type: impl
+    title: Admin shipping rate update/delete
+    file: app/api/admin/shipping-rates/[id]/route.ts
+    req: [REQ-ADM-005]
+    depends_on: [TASK-013]
+
+  - id: TASK-040T
+    layer: L3_api
+    type: test
+    title: Test shipping rate update/delete authorization
+    file: app/api/admin/shipping-rates/[id]/route.test.ts
+    req: [REQ-ADM-005]
+    depends_on: [TASK-006, TASK-040]
+
+  - id: TASK-041
+    layer: L3_api
+    type: impl
+    title: Cron endpoint — expire stale PENDING orders + restore stock
+    file: app/api/cron/expire-pending-orders/route.ts
+    req: [REQ-PAY-004]
+    depends_on: [TASK-014]
+    notes: |
+      Protected by CRON_SECRET header. Finds Order.status=PENDING && createdAt
+      < now-24h, transitions to CANCELLED with reason "expired", restoreOrderStock.
+
+  - id: TASK-041T
+    layer: L3_api
+    type: test
+    title: Test cron auth header + only stale orders affected
+    file: app/api/cron/expire-pending-orders/route.test.ts
+    req: [REQ-PAY-004]
+    depends_on: [TASK-006, TASK-041]
+
+  # =====================================================================
+  # LAYER 4 — Client state (Context + hooks)
+  # =====================================================================
+
+  - id: TASK-042
+    layer: L4_client_state
+    type: impl
+    title: Cart context provider — guest localStorage + auth API + merge on login
+    file: components/cart/CartProvider.tsx
+    req: [REQ-CART-002, REQ-CART-003, REQ-CART-004, REQ-CART-005]
+    depends_on: [TASK-004, TASK-023, TASK-024, TASK-025, TASK-026]
+    notes: |
+      Single source of truth for cart state on the client. Owns:
+        - localStorage sync for guest (key: zari_cart_v1)
+        - fetch sync for auth
+        - useEffect on session change → calls /api/cart/merge with localStorage
+          contents → clears localStorage on success → re-fetches cart.
+      Exposes useCart() with items, totals, addItem, updateQuantity, removeItem,
+      clear, isLoading, mergeError.
+
+  - id: TASK-042T
+    layer: L4_client_state
+    type: test
+    title: Test cart provider — guest→auth merge and localStorage clear
+    file: components/cart/CartProvider.test.tsx
+    req: [REQ-CART-003]
+    depends_on: [TASK-006, TASK-042]
+
+  - id: TASK-043
+    layer: L4_client_state
+    type: impl
+    title: useProductFilters hook — URL-state for filters/sort/page
+    file: hooks/useProductFilters.ts
+    req: [REQ-FLT-001, REQ-FLT-002, REQ-FLT-003, REQ-FLT-005]
+    depends_on: [TASK-004]
+    notes: |
+      Wraps useSearchParams + useRouter for category/priceMin/priceMax/label/
+      sort/page. Reading is a pure selector; writing replaces URL with
+      router.replace (no scroll, push: false for filter changes).
+
+  - id: TASK-043T
+    layer: L4_client_state
+    type: test
+    title: Test filter hook reads/writes URL params correctly
+    file: hooks/useProductFilters.test.ts
+    req: [REQ-FLT-001, REQ-FLT-003]
+    depends_on: [TASK-006, TASK-043]
+
+  # =====================================================================
+  # LAYER 5 — Components (Shop / Cart / Checkout / Account / Admin)
+  # =====================================================================
+
+  - id: TASK-044
+    layer: L5_components
+    type: impl
+    title: ProductCard component (shop variant)
+    file: components/shop/ProductCard.tsx
+    req: [REQ-CAT-003, REQ-CAT-007]
+    depends_on: [TASK-004, TASK-042]
+
+  - id: TASK-044T
+    layer: L5_components
+    type: test
+    title: Test ProductCard disables CTA when out of stock
+    file: components/shop/ProductCard.test.tsx
+    req: [REQ-CAT-007]
+    depends_on: [TASK-006, TASK-044]
+
+  - id: TASK-045
+    layer: L5_components
+    type: impl
+    title: ProductGrid + pagination
+    file: components/shop/ProductGrid.tsx
+    req: [REQ-CAT-003, REQ-FLT-005]
+    depends_on: [TASK-044, TASK-043]
+
+  - id: TASK-045T
+    layer: L5_components
+    type: test
+    title: Test grid pagination + empty state
+    file: components/shop/ProductGrid.test.tsx
+    req: [REQ-FLT-005]
+    depends_on: [TASK-006, TASK-045]
+
+  - id: TASK-046
+    layer: L5_components
+    type: impl
+    title: FilterSidebar (collapsible on mobile via Sheet)
+    file: components/shop/FilterSidebar.tsx
+    req: [REQ-FLT-001, REQ-FLT-002, REQ-FLT-004]
+    depends_on: [TASK-016, TASK-017, TASK-043]
+    notes: |
+      Modal-owner: this component owns the mobile filter Sheet. Do NOT also
+      mount the same Sheet from ProductGrid/ShopHeader.
+
+  - id: TASK-046T
+    layer: L5_components
+    type: test
+    title: Test filter sidebar updates URL on change
+    file: components/shop/FilterSidebar.test.tsx
+    req: [REQ-FLT-001]
+    depends_on: [TASK-006, TASK-046]
+
+  - id: TASK-047
+    layer: L5_components
+    type: impl
+    title: ShopHeader (title, sort dropdown, mobile filter trigger)
+    file: components/shop/ShopHeader.tsx
+    req: [REQ-FLT-002, REQ-FLT-004]
+    depends_on: [TASK-016, TASK-043, TASK-046]
+
+  - id: TASK-047T
+    layer: L5_components
+    type: test
+    title: Test sort dropdown writes ?sort= param
+    file: components/shop/ShopHeader.test.tsx
+    req: [REQ-FLT-002]
+    depends_on: [TASK-006, TASK-047]
+
+  - id: TASK-048
+    layer: L5_components
+    type: impl
+    title: ProductDetail (image, description, quantity stepper, add-to-cart)
+    file: components/shop/ProductDetail.tsx
+    req: [REQ-CAT-005, REQ-CAT-007]
+    depends_on: [TASK-015, TASK-042]
+
+  - id: TASK-048T
+    layer: L5_components
+    type: test
+    title: Test quantity stepper clamps to stock
+    file: components/shop/ProductDetail.test.tsx
+    req: [REQ-CAT-007]
+    depends_on: [TASK-006, TASK-048]
+
+  - id: TASK-049
+    layer: L5_components
+    type: impl
+    title: CartLineItem (qty +/-/remove)
+    file: components/cart/CartLineItem.tsx
+    req: [REQ-CART-005]
+    depends_on: [TASK-042]
+
+  - id: TASK-049T
+    layer: L5_components
+    type: test
+    title: Test optimistic update + rollback on failure
+    file: components/cart/CartLineItem.test.tsx
+    req: [REQ-CART-005]
+    depends_on: [TASK-006, TASK-049]
+
+  - id: TASK-050
+    layer: L5_components
+    type: impl
+    title: CartIcon (header badge with live count)
+    file: components/cart/CartIcon.tsx
+    req: [REQ-CART-004]
+    depends_on: [TASK-042]
+
+  - id: TASK-051
+    layer: L5_components
+    type: impl
+    title: CartDrawer (slide-over via Sheet)
+    file: components/cart/CartDrawer.tsx
+    req: [REQ-CART-004]
+    depends_on: [TASK-017, TASK-042, TASK-049, TASK-050]
+    notes: |
+      Modal-owner: CartDrawer owns its Sheet. CartIcon only triggers it via
+      shared CartUI context (open state in CartProvider).
+
+  - id: TASK-051T
+    layer: L5_components
+    type: test
+    title: Test cart drawer opens + Checkout CTA gated by valid items
+    file: components/cart/CartDrawer.test.tsx
+    req: [REQ-CART-004, REQ-CHK-001]
+    depends_on: [TASK-006, TASK-051]
+
+  - id: TASK-052
+    layer: L5_components
+    type: impl
+    title: OrderSummary (right rail, sticky on desktop)
+    file: components/checkout/OrderSummary.tsx
+    req: [REQ-CHK-004]
+    depends_on: [TASK-004]
+
+  - id: TASK-052T
+    layer: L5_components
+    type: test
+    title: Test totals recompute on shipping fee change
+    file: components/checkout/OrderSummary.test.tsx
+    req: [REQ-CHK-004]
+    depends_on: [TASK-006, TASK-052]
+
+  - id: TASK-053
+    layer: L5_components
+    type: impl
+    title: AddressForm (shared by guest + auth)
+    file: components/checkout/AddressForm.tsx
+    req: [REQ-CHK-002, REQ-CHK-005]
+    depends_on: [TASK-015, TASK-016, TASK-013]
+
+  - id: TASK-053T
+    layer: L5_components
+    type: test
+    title: Test Indonesian phone + 5-digit postal validation
+    file: components/checkout/AddressForm.test.tsx
+    req: [REQ-CHK-005]
+    depends_on: [TASK-006, TASK-053]
+
+  - id: TASK-054
+    layer: L5_components
+    type: impl
+    title: SavedAddressPicker (auth-only)
+    file: components/checkout/SavedAddressPicker.tsx
+    req: [REQ-CHK-003, REQ-ADDR-002]
+    depends_on: [TASK-053]
+    notes: |
+      Modal-owner: when "Add new" is clicked, opens an inline AddressForm
+      dialog OWNED by this component. No other component should open it.
+
+  - id: TASK-054T
+    layer: L5_components
+    type: test
+    title: Test selecting saved address prefills checkout form
+    file: components/checkout/SavedAddressPicker.test.tsx
+    req: [REQ-CHK-003]
+    depends_on: [TASK-006, TASK-054]
+
+  - id: TASK-055
+    layer: L5_components
+    type: impl
+    title: OrderCard (order history entry)
+    file: components/account/OrderCard.tsx
+    req: [REQ-ORD-003]
+    depends_on: [TASK-004]
+
+  - id: TASK-055T
+    layer: L5_components
+    type: test
+    title: Test OrderCard status badge variants
+    file: components/account/OrderCard.test.tsx
+    req: [REQ-ORD-003]
+    depends_on: [TASK-006, TASK-055]
+
+  - id: TASK-056
+    layer: L5_components
+    type: impl
+    title: AddressCard (address book entry, edit/delete/default)
+    file: components/account/AddressCard.tsx
+    req: [REQ-ADDR-002]
+    depends_on: [TASK-053]
+
+  - id: TASK-056T
+    layer: L5_components
+    type: test
+    title: Test AddressCard set-default flow
+    file: components/account/AddressCard.test.tsx
+    req: [REQ-ADDR-002]
+    depends_on: [TASK-006, TASK-056]
+
+  - id: TASK-057
+    layer: L5_components
+    type: impl
+    title: Admin OrdersTable (filters + pagination)
+    file: components/admin/OrdersTable.tsx
+    req: [REQ-ADM-001]
+    depends_on: [TASK-016, TASK-015]
+
+  - id: TASK-057T
+    layer: L5_components
+    type: test
+    title: Test OrdersTable filter combinations
+    file: components/admin/OrdersTable.test.tsx
+    req: [REQ-ADM-001]
+    depends_on: [TASK-006, TASK-057]
+
+  - id: TASK-058
+    layer: L5_components
+    type: impl
+    title: Admin OrderStatusStepper (visual transition UI)
+    file: components/admin/OrderStatusStepper.tsx
+    req: [REQ-ADM-002]
+    depends_on: [TASK-004]
+    notes: |
+      Modal-owner: opens ConfirmDialog (existing primitive) on every
+      transition. No other component opens this dialog.
+
+  - id: TASK-058T
+    layer: L5_components
+    type: test
+    title: Test stepper disables invalid transitions
+    file: components/admin/OrderStatusStepper.test.tsx
+    req: [REQ-ADM-002]
+    depends_on: [TASK-006, TASK-058]
+
+  - id: TASK-059
+    layer: L5_components
+    type: impl
+    title: Admin CategoryForm (create/edit)
+    file: components/admin/CategoryForm.tsx
+    req: [REQ-ADM-003]
+    depends_on: [TASK-015, TASK-013]
+
+  - id: TASK-059T
+    layer: L5_components
+    type: test
+    title: Test category form slug auto-derives from name
+    file: components/admin/CategoryForm.test.tsx
+    req: [REQ-ADM-003]
+    depends_on: [TASK-006, TASK-059]
+
+  - id: TASK-060
+    layer: L5_components
+    type: impl
+    title: Admin ShippingRateForm (create/edit)
+    file: components/admin/ShippingRateForm.tsx
+    req: [REQ-ADM-005]
+    depends_on: [TASK-015, TASK-016, TASK-013]
+
+  - id: TASK-060T
+    layer: L5_components
+    type: test
+    title: Test shipping rate fee positive validation
+    file: components/admin/ShippingRateForm.test.tsx
+    req: [REQ-ADM-005]
+    depends_on: [TASK-006, TASK-060]
+
+  # =====================================================================
+  # LAYER 6 — Pages (App Router)
+  # =====================================================================
+
+  - id: TASK-061
+    layer: L6_pages
+    type: impl
+    title: /shop page
+    file: app/shop/page.tsx
+    req: [REQ-CAT-003, REQ-FLT-001, REQ-FLT-002, REQ-FLT-005]
+    depends_on: [TASK-019, TASK-021, TASK-045, TASK-046, TASK-047]
+
+  - id: TASK-061T
+    layer: L6_pages
+    type: test
+    title: Smoke test /shop renders grid with filters
+    file: app/shop/page.test.tsx
+    req: [REQ-CAT-003]
+    depends_on: [TASK-006, TASK-061]
+
+  - id: TASK-062
+    layer: L6_pages
+    type: impl
+    title: /shop/[slug] product detail page
+    file: app/shop/[slug]/page.tsx
+    req: [REQ-CAT-005, REQ-SEO-002]
+    depends_on: [TASK-020, TASK-048]
+
+  - id: TASK-062T
+    layer: L6_pages
+    type: test
+    title: Smoke test product detail page + meta
+    file: app/shop/[slug]/page.test.tsx
+    req: [REQ-CAT-005, REQ-SEO-002]
+    depends_on: [TASK-006, TASK-062]
+
+  - id: TASK-063
+    layer: L6_pages
+    type: impl
+    title: /shop/category/[slug] page
+    file: app/shop/category/[slug]/page.tsx
+    req: [REQ-CAT-004]
+    depends_on: [TASK-019, TASK-021, TASK-045, TASK-046, TASK-047]
+
+  - id: TASK-063T
+    layer: L6_pages
+    type: test
+    title: Smoke test category page filters by slug
+    file: app/shop/category/[slug]/page.test.tsx
+    req: [REQ-CAT-004]
+    depends_on: [TASK-006, TASK-063]
+
+  - id: TASK-064
+    layer: L6_pages
+    type: impl
+    title: /cart full-page (drawer is primary, this is the fallback)
+    file: app/cart/page.tsx
+    req: [REQ-CART-004]
+    depends_on: [TASK-049]
+
+  - id: TASK-064T
+    layer: L6_pages
+    type: test
+    title: Smoke test /cart empty + populated states
+    file: app/cart/page.test.tsx
+    req: [REQ-CART-004]
+    depends_on: [TASK-006, TASK-064]
+
+  - id: TASK-065
+    layer: L6_pages
+    type: impl
+    title: /checkout page (guest + auth single page)
+    file: app/checkout/page.tsx
+    req: [REQ-CHK-001, REQ-CHK-002, REQ-CHK-003, REQ-CHK-006]
+    depends_on: [TASK-027, TASK-052, TASK-053, TASK-054]
+    notes: |
+      Loads Snap.js (https://app.{sandbox.,}midtrans.com/snap/snap.js) via
+      next/script. On Bayar Sekarang: POST /api/checkout, then
+      window.snap.pay(token, callbacks).
+
+  - id: TASK-065T
+    layer: L6_pages
+    type: test
+    title: Smoke test checkout submit path with mocked Snap
+    file: app/checkout/page.test.tsx
+    req: [REQ-CHK-006, REQ-PAY-002]
+    depends_on: [TASK-006, TASK-065]
+
+  - id: TASK-066
+    layer: L6_pages
+    type: impl
+    title: /checkout/success page
+    file: app/checkout/success/page.tsx
+    req: [REQ-PAY-005, REQ-NTF-004]
+    depends_on: [TASK-031]
+
+  - id: TASK-067
+    layer: L6_pages
+    type: impl
+    title: /checkout/pending page
+    file: app/checkout/pending/page.tsx
+    req: [REQ-PAY-005]
+    depends_on: [TASK-031]
+
+  - id: TASK-068
+    layer: L6_pages
+    type: impl
+    title: /checkout/error page
+    file: app/checkout/error/page.tsx
+    req: [REQ-PAY-005]
+    depends_on: [TASK-031]
+
+  - id: TASK-069
+    layer: L6_pages
+    type: impl
+    title: /orders/track page (guest order lookup)
+    file: app/orders/track/page.tsx
+    req: [REQ-ORD-005]
+    depends_on: [TASK-032]
+
+  - id: TASK-069T
+    layer: L6_pages
+    type: test
+    title: Smoke test guest tracking form
+    file: app/orders/track/page.test.tsx
+    req: [REQ-ORD-005]
+    depends_on: [TASK-006, TASK-069]
+
+  - id: TASK-070
+    layer: L6_pages
+    type: impl
+    title: /login page (customer)
+    file: app/login/page.tsx
+    req: [REQ-AUTH-002, REQ-AUTH-007]
+    depends_on: [TASK-007, TASK-015]
+
+  - id: TASK-070T
+    layer: L6_pages
+    type: test
+    title: Smoke test login form submits to customer-credentials
+    file: app/login/page.test.tsx
+    req: [REQ-AUTH-002]
+    depends_on: [TASK-006, TASK-070]
+
+  - id: TASK-071
+    layer: L6_pages
+    type: impl
+    title: /register page (customer, with Turnstile)
+    file: app/register/page.tsx
+    req: [REQ-AUTH-006]
+    depends_on: [TASK-022, TASK-015]
+
+  - id: TASK-071T
+    layer: L6_pages
+    type: test
+    title: Smoke test register form validation
+    file: app/register/page.test.tsx
+    req: [REQ-AUTH-006]
+    depends_on: [TASK-006, TASK-071]
+
+  - id: TASK-072
+    layer: L6_pages
+    type: impl
+    title: /forgot-password page (customer)
+    file: app/forgot-password/page.tsx
+    req: [REQ-AUTH-004]
+    depends_on: [TASK-015]
+
+  - id: TASK-073
+    layer: L6_pages
+    type: impl
+    title: /account profile page
+    file: app/account/page.tsx
+    req: [REQ-AUTH-004]
+    depends_on: [TASK-007]
+
+  - id: TASK-074
+    layer: L6_pages
+    type: impl
+    title: /account/addresses page
+    file: app/account/addresses/page.tsx
+    req: [REQ-ADDR-002]
+    depends_on: [TASK-033, TASK-034, TASK-056]
+
+  - id: TASK-074T
+    layer: L6_pages
+    type: test
+    title: Smoke test address book list/add/delete
+    file: app/account/addresses/page.test.tsx
+    req: [REQ-ADDR-002]
+    depends_on: [TASK-006, TASK-074]
+
+  - id: TASK-075
+    layer: L6_pages
+    type: impl
+    title: /account/orders page (order history)
+    file: app/account/orders/page.tsx
+    req: [REQ-ORD-003]
+    depends_on: [TASK-030, TASK-055]
+
+  - id: TASK-076
+    layer: L6_pages
+    type: impl
+    title: /account/orders/[id] page (with Bayar Lagi for PENDING)
+    file: app/account/orders/[id]/page.tsx
+    req: [REQ-ORD-004, REQ-PAY-006]
+    depends_on: [TASK-031, TASK-029]
+
+  - id: TASK-076T
+    layer: L6_pages
+    type: test
+    title: Smoke test Bayar Lagi shown only for PENDING
+    file: app/account/orders/[id]/page.test.tsx
+    req: [REQ-PAY-006]
+    depends_on: [TASK-006, TASK-076]
+
+  - id: TASK-077
+    layer: L6_pages
+    type: impl
+    title: Admin /admin/dashboard/orders page
+    file: app/admin/dashboard/orders/page.tsx
+    req: [REQ-ADM-001]
+    depends_on: [TASK-035, TASK-057]
+
+  - id: TASK-078
+    layer: L6_pages
+    type: impl
+    title: Admin /admin/dashboard/orders/[id] page
+    file: app/admin/dashboard/orders/[id]/page.tsx
+    req: [REQ-ADM-002]
+    depends_on: [TASK-036, TASK-058]
+
+  - id: TASK-078T
+    layer: L6_pages
+    type: test
+    title: Smoke test status transitions end-to-end
+    file: app/admin/dashboard/orders/[id]/page.test.tsx
+    req: [REQ-ADM-002]
+    depends_on: [TASK-006, TASK-078]
+
+  - id: TASK-079
+    layer: L6_pages
+    type: impl
+    title: Admin /admin/dashboard/categories page
+    file: app/admin/dashboard/categories/page.tsx
+    req: [REQ-ADM-003]
+    depends_on: [TASK-037, TASK-038, TASK-059]
+
+  - id: TASK-080
+    layer: L6_pages
+    type: impl
+    title: Admin /admin/dashboard/shipping-rates page
+    file: app/admin/dashboard/shipping-rates/page.tsx
+    req: [REQ-ADM-005]
+    depends_on: [TASK-039, TASK-040, TASK-060]
+
+  # =====================================================================
+  # LAYER 7 — Cross-cutting integration (modifies existing files)
+  # =====================================================================
+
+  - id: TASK-081
+    layer: L7_integration
+    type: impl
+    title: Root middleware — role-based route protection
+    file: middleware.ts
+    req: [REQ-AUTH-005]
+    depends_on: [TASK-007]
+    notes: |
+      New file. matcher protects /admin/* (admin only), /account/* (customer
+      only), /checkout (no admin), and redirects unauthenticated users to
+      /login with returnTo param.
+
+  - id: TASK-081T
+    layer: L7_integration
+    type: test
+    title: Test middleware redirects + role rejections
+    file: middleware.test.ts
+    req: [REQ-AUTH-005]
+    depends_on: [TASK-006, TASK-081]
+
+  - id: TASK-082
+    layer: L7_integration
+    type: impl
+    title: Mount Toaster + SessionProvider + CartProvider in root layout
+    file: app/layout.tsx
+    req: [REQ-CART-004]
+    depends_on: [TASK-018, TASK-042]
+    notes: |
+      Wrap children with NextAuth SessionProvider → CartProvider → existing
+      tree. Mount <Toaster /> from components/ui/sonner.tsx.
+
+  - id: TASK-083
+    layer: L7_integration
+    type: impl
+    title: Add "Belanja" nav link + CartIcon to Header
+    file: components/Header.tsx
+    req: [REQ-CAT-006, REQ-CART-004]
+    depends_on: [TASK-050]
+    notes: |
+      Insert between existing nav items. Mobile menu also gets Belanja link.
+      CartIcon goes on the right, before existing CTA.
+
+  - id: TASK-084
+    layer: L7_integration
+    type: impl
+    title: Extend admin Honey Collection form with category/stock fields
+    file: app/admin/dashboard/honey-collection/page.tsx
+    req: [REQ-ADM-004]
+    depends_on: [TASK-021, TASK-016]
+    notes: |
+      Existing page edit; add Select for category, number input for stock,
+      checkbox for alwaysAvailable. priceNumeric auto-derived from price
+      string on save (admin can override).
+
+  - id: TASK-085
+    layer: L7_integration
+    type: impl
+    title: Add 2 new stat cards to admin dashboard
+    file: app/admin/dashboard/page.tsx
+    req: [REQ-ADM-006]
+    depends_on: [TASK-035]
+    notes: |
+      "Pesanan Baru" (count Orders WHERE status=PENDING) and "Pendapatan
+      Bulan Ini" (sum total WHERE status IN (PAID,SHIPPED,DELIVERED) AND
+      paidAt within current month).
+
+  - id: TASK-086
+    layer: L7_integration
+    type: impl
+    title: Extend admin sidebar nav with new links
+    file: components/admin/AdminSidebar.tsx
+    req: [REQ-ADM-001, REQ-ADM-003, REQ-ADM-005]
+    depends_on: []
+    notes: Add Pesanan, Kategori, Ongkos Kirim entries.
+
+  - id: TASK-087
+    layer: L7_integration
+    type: impl
+    title: Extend sitemap with shop URLs
+    file: app/sitemap.ts
+    req: [REQ-SEO-001]
+    depends_on: [TASK-019, TASK-021]
+    notes: |
+      Emit /shop, /shop/category/[slug] for each active category,
+      /shop/[slug] for each active product.
+
+# =============================================================================
+# Execution waves (for parallel orchestrator)
+# =============================================================================
+
+execution_order:
+  - wave: 1
+    parallel: true
+    tasks: [TASK-001, TASK-004, TASK-005, TASK-006]
+
+  - wave: 2
+    parallel: false
+    tasks: [TASK-002, TASK-003]
+
+  - wave: 3
+    parallel: true
+    tasks:
+      - TASK-007  # auth
+      - TASK-008  # midtrans
+      - TASK-009  # email
+      - TASK-010  # cart lib
+      - TASK-011  # orderNumber
+      - TASK-012  # shipping
+      - TASK-013  # schemas
+      - TASK-014  # orders service
+      - TASK-015  # ui/input
+      - TASK-016  # ui/select
+      - TASK-017  # ui/sheet
+      - TASK-018  # ui/sonner
+      - TASK-007T
+      - TASK-008T
+      - TASK-009T
+      - TASK-010T
+      - TASK-011T
+      - TASK-012T
+      - TASK-013T
+      - TASK-014T
+      - TASK-015T
+      - TASK-016T
+      - TASK-017T
+
+  - wave: 4
+    parallel: true
+    tasks:
+      - TASK-019
+      - TASK-020
+      - TASK-021
+      - TASK-022
+      - TASK-023
+      - TASK-024
+      - TASK-025
+      - TASK-026
+      - TASK-027
+      - TASK-028
+      - TASK-029
+      - TASK-030
+      - TASK-031
+      - TASK-032
+      - TASK-033
+      - TASK-034
+      - TASK-035
+      - TASK-036
+      - TASK-037
+      - TASK-038
+      - TASK-039
+      - TASK-040
+      - TASK-041
+      - TASK-019T
+      - TASK-020T
+      - TASK-021T
+      - TASK-022T
+      - TASK-023T
+      - TASK-024T
+      - TASK-025T
+      - TASK-026T
+      - TASK-027T
+      - TASK-028T
+      - TASK-029T
+      - TASK-030T
+      - TASK-031T
+      - TASK-032T
+      - TASK-033T
+      - TASK-034T
+      - TASK-035T
+      - TASK-036T
+      - TASK-037T
+      - TASK-038T
+      - TASK-039T
+      - TASK-040T
+      - TASK-041T
+
+  - wave: 5
+    parallel: true
+    tasks: [TASK-042, TASK-042T, TASK-043, TASK-043T]
+
+  - wave: 6
+    parallel: true
+    tasks:
+      - TASK-044
+      - TASK-045
+      - TASK-046
+      - TASK-047
+      - TASK-048
+      - TASK-049
+      - TASK-050
+      - TASK-051
+      - TASK-052
+      - TASK-053
+      - TASK-054
+      - TASK-055
+      - TASK-056
+      - TASK-057
+      - TASK-058
+      - TASK-059
+      - TASK-060
+      - TASK-044T
+      - TASK-045T
+      - TASK-046T
+      - TASK-047T
+      - TASK-048T
+      - TASK-049T
+      - TASK-051T
+      - TASK-052T
+      - TASK-053T
+      - TASK-054T
+      - TASK-055T
+      - TASK-056T
+      - TASK-057T
+      - TASK-058T
+      - TASK-059T
+      - TASK-060T
+
+  - wave: 7
+    parallel: true
+    tasks:
+      - TASK-061
+      - TASK-062
+      - TASK-063
+      - TASK-064
+      - TASK-065
+      - TASK-066
+      - TASK-067
+      - TASK-068
+      - TASK-069
+      - TASK-070
+      - TASK-071
+      - TASK-072
+      - TASK-073
+      - TASK-074
+      - TASK-075
+      - TASK-076
+      - TASK-077
+      - TASK-078
+      - TASK-079
+      - TASK-080
+      - TASK-061T
+      - TASK-062T
+      - TASK-063T
+      - TASK-064T
+      - TASK-065T
+      - TASK-069T
+      - TASK-070T
+      - TASK-071T
+      - TASK-074T
+      - TASK-076T
+      - TASK-078T
+
+  - wave: 8
+    parallel: false
+    tasks:
+      - TASK-081
+      - TASK-081T
+      - TASK-082
+      - TASK-083
+      - TASK-084
+      - TASK-085
+      - TASK-086
+      - TASK-087
+
+# =============================================================================
+# Modal/Dialog ownership registry (validation: each modal has exactly one owner)
+# =============================================================================
+
+modal_ownership:
+  - modal: CartDrawer (Sheet)
+    owner: TASK-051 (components/cart/CartDrawer.tsx)
+    triggered_by: TASK-050 (CartIcon — via CartProvider UI state, not by mounting Sheet)
+  - modal: FilterSidebar mobile drawer (Sheet)
+    owner: TASK-046 (components/shop/FilterSidebar.tsx)
+    triggered_by: TASK-047 (ShopHeader — passes open state via prop / context)
+  - modal: SavedAddress "Add new" dialog
+    owner: TASK-054 (components/checkout/SavedAddressPicker.tsx)
+    triggered_by: TASK-054 (self)
+  - modal: Order status transition ConfirmDialog (existing primitive)
+    owner: TASK-058 (components/admin/OrderStatusStepper.tsx)
+    triggered_by: TASK-058 (self)
+
+# =============================================================================
+# REQ traceability — every REQ must map to at least one impl task
+# =============================================================================
+
+req_coverage:
+  REQ-CAT-001: [TASK-001, TASK-021, TASK-037]
+  REQ-CAT-002: [TASK-001, TASK-003, TASK-084]
+  REQ-CAT-003: [TASK-019, TASK-044, TASK-045, TASK-061]
+  REQ-CAT-004: [TASK-063]
+  REQ-CAT-005: [TASK-020, TASK-048, TASK-062]
+  REQ-CAT-006: [TASK-083]
+  REQ-CAT-007: [TASK-044, TASK-048]
+  REQ-FLT-001: [TASK-019, TASK-021, TASK-043, TASK-046, TASK-061]
+  REQ-FLT-002: [TASK-019, TASK-016, TASK-043, TASK-047]
+  REQ-FLT-003: [TASK-019, TASK-043]
+  REQ-FLT-004: [TASK-017, TASK-046, TASK-047]
+  REQ-FLT-005: [TASK-019, TASK-043, TASK-045, TASK-061]
+  REQ-AUTH-001: [TASK-001, TASK-022]
+  REQ-AUTH-002: [TASK-007, TASK-070]
+  REQ-AUTH-003: [TASK-005, TASK-007]
+  REQ-AUTH-004: [TASK-072, TASK-073]
+  REQ-AUTH-005: [TASK-081]
+  REQ-AUTH-006: [TASK-013, TASK-022, TASK-071]
+  REQ-AUTH-007: [TASK-007, TASK-070]
+  REQ-CART-001: [TASK-001, TASK-023]
+  REQ-CART-002: [TASK-010, TASK-023, TASK-042]
+  REQ-CART-003: [TASK-010, TASK-026, TASK-042]
+  REQ-CART-004: [TASK-050, TASK-051, TASK-064, TASK-082]
+  REQ-CART-005: [TASK-024, TASK-025, TASK-042, TASK-049]
+  REQ-CART-006: [TASK-010, TASK-024]
+  REQ-CHK-001: [TASK-051, TASK-065]
+  REQ-CHK-002: [TASK-027, TASK-053, TASK-065]
+  REQ-CHK-003: [TASK-027, TASK-054, TASK-065]
+  REQ-CHK-004: [TASK-012, TASK-052]
+  REQ-CHK-005: [TASK-013, TASK-053]
+  REQ-CHK-006: [TASK-027, TASK-065]
+  REQ-CHK-007: [TASK-014, TASK-027]
+  REQ-ADDR-001: [TASK-001, TASK-013, TASK-033]
+  REQ-ADDR-002: [TASK-033, TASK-034, TASK-054, TASK-056, TASK-074]
+  REQ-PAY-001: [TASK-008]
+  REQ-PAY-002: [TASK-008, TASK-027]
+  REQ-PAY-003: [TASK-001]
+  REQ-PAY-004: [TASK-008, TASK-028, TASK-041]
+  REQ-PAY-005: [TASK-066, TASK-067, TASK-068]
+  REQ-PAY-006: [TASK-029, TASK-076]
+  REQ-ORD-001: [TASK-001, TASK-011]
+  REQ-ORD-002: [TASK-001]
+  REQ-ORD-003: [TASK-030, TASK-055, TASK-075]
+  REQ-ORD-004: [TASK-031, TASK-076]
+  REQ-ORD-005: [TASK-032, TASK-069]
+  REQ-ADM-001: [TASK-035, TASK-057, TASK-077, TASK-086]
+  REQ-ADM-002: [TASK-036, TASK-058, TASK-078]
+  REQ-ADM-003: [TASK-037, TASK-038, TASK-059, TASK-079, TASK-086]
+  REQ-ADM-004: [TASK-084]
+  REQ-ADM-005: [TASK-001, TASK-012, TASK-039, TASK-040, TASK-060, TASK-080, TASK-086]
+  REQ-ADM-006: [TASK-085]
+  REQ-NTF-001: [TASK-009, TASK-028]
+  REQ-NTF-002: [TASK-009, TASK-036]
+  REQ-NTF-003: [TASK-009]
+  REQ-NTF-004: [TASK-066]
+  REQ-SEO-001: [TASK-087]
+  REQ-SEO-002: [TASK-062]
