@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Instagram, MessageCircle, Mail } from "lucide-react";
+import { MessageCircle, Mail } from "lucide-react";
+import { InstagramIcon as Instagram } from "@/components/icons/InstagramIcon";
 import { CONTACT_INFO } from "@/lib/constants";
 
 interface Settings {
@@ -43,7 +44,7 @@ export function Footer() {
         <div className="grid md:grid-cols-2 gap-12 items-start">
           {/* Left: Brand & Contact */}
           <div>
-            <h3 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent mb-8">
+            <h3 className="text-3xl lg:text-4xl font-bold bg-linear-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent mb-8">
               Zari Honey
             </h3>
 

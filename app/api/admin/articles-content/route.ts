@@ -121,7 +121,7 @@ export async function PUT(request: Request) {
     revalidatePath("/articles", "page"); // Revalidate articles list
 
     // Revalidate all article detail pages
-    articles.forEach((article: any) => {
+    articles.forEach((article: { slug: string }) => {
       revalidatePath(`/articles/${article.slug}`, "page");
     });
 

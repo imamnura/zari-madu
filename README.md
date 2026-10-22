@@ -1,157 +1,207 @@
-# Zari Honey - Landing Page Premium
+# Zari Honey — Brand Site + E-Commerce
 
-Landing page modern dan responsive untuk Zari Honey, brand madu premium Indonesia.
+Brand landing page + admin CMS + customer shop for **Zari Honey**, an Indonesian
+premium honey brand. Built on Next.js 16 App Router with Prisma, NextAuth v5,
+Midtrans payments, and Tailwind + shadcn/ui.
 
-## 🚀 Fitur Utama
+## 🚀 What's inside
 
-- ✅ **Single-page responsive design** - Mobile first, optimized untuk semua device
-- ✅ **Animasi smooth** - Menggunakan Framer Motion untuk pengalaman premium
-- ✅ **WhatsApp Integration** - Direct CTA untuk order dan reseller inquiry
-- ✅ **SEO Optimized** - Meta tags, Open Graph, dan Twitter Cards
-- ✅ **Modern Tech Stack** - Next.js 16, TypeScript, TailwindCSS, shadcn/ui
+**Public landing page** (`/`)
+Single-page brochure with Hero, About, Why Choose, Honey Collection,
+Partnership, Testimonials, Articles, CTA, and Footer. Every section's content
+is editable from the admin dashboard.
 
-## 📋 Section Landing Page
+**Customer shop** (`/shop`)
+- Product catalog with category nav, price/label filters, sort, and pagination
+- Product detail pages (SSR + OG meta)
+- Persistent cart that survives guest → customer login (auto-merge)
+- Guest or authenticated checkout
+- Midtrans Snap payment (QRIS, GoPay, OVO, DANA, Virtual Account, credit card)
+- Email confirmation on payment (Resend)
+- Customer account: order history, address book, "Bayar Lagi" for pending orders
+- Guest order tracking by order number + email
 
-1. **Header** - Fixed navigation dengan smooth scroll
-2. **Hero Section** - Headline premium dengan dual CTA (Order & Reseller)
-3. **About Us** - Brand story dengan impressive stats
-4. **Core Product Lines** - ZariHoney, ZariCo, ZariFarm
-5. **Why Choose Zari** - 6 keunggulan brand
-6. **Product Showcase** - 4 produk madu premium unggulan
-7. **Testimonials** - Carousel testimoni pelanggan
-8. **CTA Section** - Final call-to-action dengan gradient background
-9. **Footer** - Kontak dan social media links
+**Admin dashboard** (`/admin/dashboard`)
+- Edit every landing-page section (Hero, About, Why Choose, Honey Collection,
+  Partnership, Testimonials, Articles, Settings)
+- Manage products, categories, shipping rates
+- Manage orders with state machine (PENDING → PAID → SHIPPED → DELIVERED, with
+  CANCELLED branch and automatic stock restore)
+- Dashboard stats: new orders, monthly revenue, content counters
+- Visitor analytics chart (placeholder; can be wired to GA4)
 
-## 🛠️ Tech Stack
+**Auth & access**
+- NextAuth v5 with two roles: `admin` and `customer`
+- Admin login at `/admin/login` (Credentials + Turnstile captcha)
+- Customer login at `/login` (Credentials + optional Google OAuth)
+- Customer registration at `/register` (with Turnstile)
+- Role-based middleware protects `/admin/*` and `/account/*`
 
-- **Framework:** Next.js 16 (App Router)
-- **Language:** TypeScript
-- **Styling:** TailwindCSS v4
-- **UI Components:** shadcn/ui
-- **Animations:** Framer Motion
-- **Carousel:** Embla Carousel
-- **Icons:** Lucide React
+## 🛠️ Tech stack
 
-## 📦 Installation & Setup
+- **Framework:** Next.js 16 (App Router, Turbopack)
+- **Language:** TypeScript 5
+- **Database:** PostgreSQL via Prisma 6
+- **Auth:** NextAuth v5 (beta)
+- **Payment:** Midtrans Snap (HTTP integration)
+- **Email:** Resend
+- **Captcha:** Cloudflare Turnstile
+- **Images:** Cloudinary
+- **Styling:** TailwindCSS v4 + shadcn/ui
+- **Animations:** Framer Motion + Embla Carousel
+- **Rich text:** Tiptap (admin-only)
+- **Forms:** react-hook-form + zod
+- **Toasts:** sonner
+- **Tests:** Vitest + React Testing Library
+
+## 📦 Quick start
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
-# Jalankan development server
-npm run dev
+# Set up env (see .env.example, then fill in the secrets)
+cp .env.example .env
 
-# Build untuk production
-npm run build
+# Apply DB migrations
+pnpm prisma migrate dev   # interactive (creates new migrations if schema changed)
+# or in production / CI:
+# pnpm prisma migrate deploy
 
-# Jalankan production build
-npm start
+# Seed initial content + default admin
+pnpm prisma:seed
+
+# Start dev server
+pnpm dev          # http://localhost:3000
 ```
 
-## 🌐 Development
+Default admin login (from seed):
 
-Development server akan berjalan di:
-
-- Local: http://localhost:3000
-
-## 📝 Kustomisasi Konten
-
-Semua konten statis terpusat di `/lib/constants.ts`:
-
-```typescript
-// Edit konten di sini
-export const HERO_CONTENT = {
-  headline: 'Madu Premium Asli dari Alam Indonesia',
-  subheadline: '...',
-  badges: ['100% Raw Honey', 'Single-Origin', ...]
-};
-
-export const CONTACT_INFO = {
-  whatsapp: '+6285777578827',
-  instagram: 'https://www.instagram.com/zarihoney',
-  maps: 'https://share.google/I9V9KqwFHa6dMkA7k',
-};
+```
+admin@zarilife.com / admin123
 ```
 
-## 📱 WhatsApp Integration
+⚠ **Change this immediately in any non-local environment.**
 
-Dua jenis CTA WhatsApp:
+## 🌍 Routes overview
 
-1. **Order** - Pre-filled message untuk pemesanan
-2. **Reseller** - Pre-filled message untuk kemitraan
+| Route | Visibility | Purpose |
+|---|---|---|
+| `/` | Public | Landing page |
+| `/articles`, `/articles/[slug]` | Public | Blog |
+| `/shop`, `/shop/[slug]`, `/shop/category/[slug]` | Public | Catalog |
+| `/cart` | Public | Cart fallback (drawer is primary) |
+| `/checkout`, `/checkout/{success,pending,error}` | Public | Checkout flow |
+| `/orders/track` | Public | Guest order lookup |
+| `/login`, `/register`, `/forgot-password` | Public | Customer auth |
+| `/account`, `/account/{addresses,orders,orders/[id]}` | Customer | Account area |
+| `/admin/login` | Public | Admin auth |
+| `/admin/dashboard/...` | Admin | CMS + order management |
 
-Auto-detect mobile/desktop dan buka WhatsApp app atau web.
+All API routes are under `/api/*`. The Midtrans payment webhook lives at
+`POST /api/payment/midtrans/notification` (signature-verified, idempotent).
 
-## 🎨 Komponen
+## 🔑 Environment variables
 
-Semua komponen ada di `/components/`:
+See `.env.example` for the full list. Required to make checkout work end-to-end:
 
-- `Header.tsx` - Sticky header dengan mobile menu
-- `HeroSection.tsx` - Hero dengan animasi dan CTA
-- `AboutSection.tsx` - About dengan stats counter
-- `ProductLinesSection.tsx` - 3 product lines cards
-- `WhyChooseSection.tsx` - 6 benefits dengan icons
-- `ProductShowcaseSection.tsx` - Product cards grid
-- `TestimonialsSection.tsx` - Carousel testimonials
-- `CTASection.tsx` - Final CTA dengan gradient
-- `Footer.tsx` - Footer dengan links
+```env
+DATABASE_URL=postgresql://...
+AUTH_SECRET=<openssl rand -hex 32>
+NEXTAUTH_URL=https://your-domain.com
 
-## 📸 Menambahkan Gambar Produk
+# Midtrans (Snap)
+MIDTRANS_SERVER_KEY=
+MIDTRANS_CLIENT_KEY=
+MIDTRANS_IS_PRODUCTION=false
+NEXT_PUBLIC_MIDTRANS_CLIENT_KEY=
+NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION=false
 
-1. Simpan gambar di `/public/images/products/`
-2. Update path di `/lib/constants.ts`:
+# Email
+RESEND_API_KEY=
+EMAIL_FROM="Zari Honey <noreply@zarilife.com>"
+WHATSAPP_ADMIN_PHONE=6285777578827
 
-```typescript
-export const PRODUCTS_SHOWCASE = [
-  {
-    id: 'madu-hutan',
-    name: 'Madu Hutan Liar',
-    image: '/images/products/madu-hutan.jpg', // Update ini
-    ...
-  }
-];
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_UPLOAD_PRESET=
+
+# Captcha
+TURNSTILE_SECRET_KEY=
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Cron secret (for /api/cron/expire-pending-orders)
+CRON_SECRET=
 ```
 
-## 🚀 Deployment
+All `process.env.*` reads degrade gracefully when unset (provider drops out,
+email skipped). For a real production deploy, ALL of the above must be set.
 
-### Vercel (Recommended)
+## 🧪 Testing
 
 ```bash
-# Install Vercel CLI
-npm i -g vercel
+pnpm test              # Run all tests (vitest)
+pnpm test:watch        # Watch mode
+pnpm test:ui           # Vitest UI
 
-# Deploy
-vercel
+# If the full suite hits a memory limit (jsdom worker), run by directory:
+pnpm test --dir lib --dir types --dir hooks
+pnpm test --dir components
+pnpm test --dir app --dir proxy.test.ts
 ```
 
-### Manual Build
+## 🏗️ Deployment
 
-```bash
-npm run build
-# Upload folder `.next` dan `public` ke hosting
-```
+The app is Next.js + Postgres. It runs well on Vercel.
 
-## 📊 Analytics & Tracking
+1. Provision Postgres, set `DATABASE_URL`.
+2. Set all env vars from `.env.example` in your platform's secret manager.
+3. Run `pnpm prisma migrate deploy`.
+4. Run `pnpm prisma:seed` once on first deploy.
+5. Build: `pnpm build`. Start: `pnpm start`. (Or `vercel` to ship.)
+6. In Midtrans dashboard, set the payment notification URL to
+   `https://<your-domain>/api/payment/midtrans/notification`.
+7. Wire `/api/cron/expire-pending-orders` to a cron scheduler (Vercel Cron,
+   cron-job.org, or GitHub Actions schedule). Hit it daily with
+   `Authorization: Bearer ${CRON_SECRET}`.
+8. **Change the default admin password.**
 
-Untuk menambahkan analytics (Google Analytics, Plausible, dll):
+See [`docs/DEVELOPMENT_STATUS.md`](docs/DEVELOPMENT_STATUS.md) for the full
+handoff guide — folder structure, architecture, common workflows, known issues,
+and follow-up roadmap.
 
-1. Tambahkan script di `app/layout.tsx`
-2. Track events di setiap CTA button
+## 📚 Documentation
 
-## 🎯 Next Steps (Future Features)
+- [`docs/DEVELOPMENT_STATUS.md`](docs/DEVELOPMENT_STATUS.md) — **start here** if
+  you're picking up this project. Architecture, file map, env vars, deploy
+  checklist.
+- [`docs/ADMIN-GUIDE.md`](docs/ADMIN-GUIDE.md) — admin UI walkthrough.
+- [`docs/DATABASE-SETUP.md`](docs/DATABASE-SETUP.md) — DB setup.
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deploy guide.
+- [`docs/CONTENT-GUIDE.md`](docs/CONTENT-GUIDE.md) — content editing tips.
+- `.kitflow/artifacts/archive/2026-05-11-customer-shop-checkout/` — the full
+  spec, plan, and verification report for the e-commerce subsystem.
 
-- [ ] Headless CMS integration untuk konten dinamis
-- [ ] Admin dashboard untuk manage products & testimonials
-- [ ] Multi-language support (ID/EN)
-- [ ] Blog section untuk SEO content
-- [ ] Instagram feed integration
+## 🤝 Contributing
+
+This is a private brand project. If you're an external contributor:
+
+1. Branch off `master`: `git checkout -b feature/<name>`
+2. Make changes, run `pnpm lint && pnpm test`.
+3. Open a PR with a clear description and screenshots for UI changes.
 
 ## 📄 License
 
-© 2025 Zari Honey. All rights reserved.
+© 2026 Zari Honey. All rights reserved.
 
-## 👨‍💻 Development Info
+## 👤 Contact
 
-- **Kontak WhatsApp:** +62 857-7757-8827
-- **Instagram:** [@zarihoney](https://www.instagram.com/zarihoney)
-- **Lokasi:** [Google Maps](https://share.google/I9V9KqwFHa6dMkA7k)
+- WhatsApp: +62 857-7757-8827
+- Instagram: [@zarihoney](https://www.instagram.com/zarihoney)

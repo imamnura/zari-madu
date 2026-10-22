@@ -13,7 +13,9 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-async function getArticles() {
+type Article = (typeof ARTICLES)[number];
+
+async function getArticles(): Promise<Article[]> {
   try {
     const content = await prisma.articleContent.findFirst({
       orderBy: { updatedAt: "desc" },
@@ -44,7 +46,7 @@ export default async function ArticleDetailPage({
 }) {
   const { slug } = await params;
   const articles = await getArticles();
-  const article = articles.find((a: any) => a.slug === slug);
+  const article = articles.find((a) => a.slug === slug);
 
   if (!article) {
     notFound();
@@ -52,7 +54,7 @@ export default async function ArticleDetailPage({
 
   // Get related articles (exclude current article, max 3)
   const relatedArticles = articles
-    .filter((a: any) => a.id !== article.id)
+    .filter((a) => a.id !== article.id)
     .slice(0, 3);
 
   return (
@@ -108,7 +110,7 @@ export default async function ArticleDetailPage({
           </div>
 
           {/* Featured Image */}
-          <div className="w-full aspect-video bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl overflow-hidden mb-12">
+          <div className="w-full aspect-video bg-linear-to-br from-amber-100 to-amber-200 rounded-2xl overflow-hidden mb-12">
             {article.image ? (
               <img
                 src={article.image}
@@ -132,7 +134,7 @@ export default async function ArticleDetailPage({
           />
 
           {/* CTA Box */}
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100 p-8 rounded-2xl border-2 border-amber-300 mb-12">
+          <div className="bg-linear-to-r from-amber-50 to-amber-100 p-8 rounded-2xl border-2 border-amber-300 mb-12">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
               Tertarik Mencoba Madu Premium Kami?
             </h3>
@@ -159,13 +161,13 @@ export default async function ArticleDetailPage({
               Artikel Terkait
             </h2>
             <div className="grid md:grid-cols-3 gap-8">
-              {relatedArticles.map((relatedArticle: any) => (
+              {relatedArticles.map((relatedArticle) => (
                 <Link
                   key={relatedArticle.id}
                   href={`/articles/${relatedArticle.slug}`}
                 >
                   <Card className="h-full hover:shadow-xl transition-all duration-300 group border-2 hover:border-amber-300">
-                    <div className="relative w-full aspect-video bg-gradient-to-br from-amber-100 to-amber-200 overflow-hidden">
+                    <div className="relative w-full aspect-video bg-linear-to-br from-amber-100 to-amber-200 overflow-hidden">
                       <Badge className="absolute top-4 left-4 bg-amber-600 text-white z-10">
                         {relatedArticle.category}
                       </Badge>

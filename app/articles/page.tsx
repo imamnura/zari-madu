@@ -12,7 +12,9 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-async function getArticles() {
+type Article = (typeof ARTICLES)[number];
+
+async function getArticles(): Promise<Article[]> {
   try {
     const content = await prisma.articleContent.findFirst({
       orderBy: { updatedAt: "desc" },
@@ -64,7 +66,7 @@ export default async function ArticlesPage() {
 
           {/* Articles Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {articles.map((article: any) => (
+            {articles.map((article) => (
               <Link key={article.id} href={`/articles/${article.slug}`}>
                 <Card className="h-full hover:shadow-2xl transition-all duration-300 group overflow-hidden border-2 hover:border-amber-300 cursor-pointer">
                   {/* Article Image */}

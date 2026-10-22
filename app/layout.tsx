@@ -4,6 +4,9 @@ import "./globals.css";
 import { SEO_CONTENT } from "@/lib/constants";
 import { Toaster } from "sonner";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { SessionProviderWrapper } from "@/components/SessionProviderWrapper";
+import { CartProvider } from "@/components/cart/CartProvider";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 import { Suspense } from "react";
 
 const inter = Inter({
@@ -77,7 +80,12 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <GoogleAnalytics />
         </Suspense>
-        {children}
+        <SessionProviderWrapper>
+          <CartProvider>
+            {children}
+            <CartDrawer />
+          </CartProvider>
+        </SessionProviderWrapper>
         <Toaster position="top-right" richColors />
       </body>
     </html>

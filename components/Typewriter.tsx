@@ -20,52 +20,40 @@ export function Typewriter({
   const [displayedText, setDisplayedText] = useState("");
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     const currentText = texts[currentTextIndex];
 
-    // If paused, wait before starting to delete
-    if (isPaused) {
+    if (!isDeleting) {
+      // Typing phase
+      if (displayedText.length < currentText.length) {
+        const typingTimeout = setTimeout(() => {
+          setDisplayedText(currentText.slice(0, displayedText.length + 1));
+        }, typingSpeed);
+        return () => clearTimeout(typingTimeout);
+      }
+
+      // Finished typing, pause before deleting
       const pauseTimeout = setTimeout(() => {
-        setIsPaused(false);
         setIsDeleting(true);
       }, delayBetween);
       return () => clearTimeout(pauseTimeout);
     }
 
-    // Typing phase
-    if (!isDeleting && displayedText.length < currentText.length) {
-      const typingTimeout = setTimeout(() => {
-        setDisplayedText(currentText.slice(0, displayedText.length + 1));
-      }, typingSpeed);
-      return () => clearTimeout(typingTimeout);
-    }
-
-    // Finished typing, pause before deleting
-    if (!isDeleting && displayedText.length === currentText.length) {
-      setIsPaused(true);
-      return;
-    }
-
-    // Deleting phase
-    if (isDeleting && displayedText.length > 0) {
-      const deletingTimeout = setTimeout(() => {
-        setDisplayedText(displayedText.slice(0, -1));
-      }, deletingSpeed);
-      return () => clearTimeout(deletingTimeout);
-    }
-
-    // Finished deleting, move to next text
-    if (isDeleting && displayedText.length === 0) {
-      setIsDeleting(false);
-      setCurrentTextIndex((prev) => (prev + 1) % texts.length);
-    }
+    // Deleting phase, then move to next text once empty
+    const deletingTimeout = setTimeout(() => {
+      const nextText = displayedText.slice(0, -1);
+      setDisplayedText(nextText);
+      if (nextText.length === 0) {
+        setIsDeleting(false);
+        setCurrentTextIndex((prev) => (prev + 1) % texts.length);
+      }
+    }, deletingSpeed);
+    return () => clearTimeout(deletingTimeout);
   }, [
     displayedText,
     currentTextIndex,
     isDeleting,
-    isPaused,
     texts,
     typingSpeed,
     deletingSpeed,

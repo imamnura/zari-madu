@@ -43,7 +43,7 @@ export async function GET() {
     }
 
     // Parse JSON fields
-    const parseStats = (data: any) => {
+    const parseStats = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
@@ -94,7 +94,7 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    const parseStatsForResponse = (data: any) => {
+    const parseStatsForResponse = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }

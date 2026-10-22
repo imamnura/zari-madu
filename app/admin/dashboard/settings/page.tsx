@@ -11,12 +11,12 @@ import {
   Save,
   Lock,
   MessageCircle,
-  Instagram,
   Mail,
   MapPin,
   ShoppingBag,
   Globe,
 } from "lucide-react";
+import { InstagramIcon as Instagram } from "@/components/icons/InstagramIcon";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/ui/password-input";
 
@@ -492,7 +492,7 @@ export default function SettingsPage() {
                   <Button
                     type="submit"
                     disabled={contactLoading}
-                    className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-8 py-6"
+                    className="bg-linear-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-8 py-6"
                   >
                     {contactLoading ? (
                       <>
@@ -586,7 +586,7 @@ export default function SettingsPage() {
               <Button
                 type="submit"
                 disabled={emailLoading}
-                className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-8 py-6"
+                className="bg-linear-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-8 py-6"
               >
                 {emailLoading ? (
                   <>
@@ -683,7 +683,7 @@ export default function SettingsPage() {
               <Button
                 type="submit"
                 disabled={passwordLoading}
-                className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-8 py-6"
+                className="bg-linear-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-8 py-6"
               >
                 {passwordLoading ? (
                   <>

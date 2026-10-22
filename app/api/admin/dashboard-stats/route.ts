@@ -10,14 +10,14 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const countJsonArray = (value: unknown): number =>
+      Array.isArray(value) ? value.length : 0;
+
     // Get article count
     const articleContentResult = await prisma.articleContent.findFirst({
       select: { articles: true },
     });
-
-    const articleCount = articleContentResult
-      ? (articleContentResult.articles as any[]).length
-      : 0;
+    const articleCount = countJsonArray(articleContentResult?.articles);
 
     // Get honey collection count
     const honeyCollectionCount = await prisma.premiumHoneyCollection.count();
@@ -26,19 +26,31 @@ export async function GET() {
     const testimonialContentResult = await prisma.testimonialContent.findFirst({
       select: { testimonials: true },
     });
-
-    const testimonialCount = testimonialContentResult
-      ? (testimonialContentResult.testimonials as any[]).length
-      : 0;
+    const testimonialCount = countJsonArray(testimonialContentResult?.testimonials);
 
     // Get partnership count
     const partnershipContentResult = await prisma.partnershipContent.findFirst({
       select: { partnerships: true },
     });
+    const partnershipCount = countJsonArray(partnershipContentResult?.partnerships);
 
-    const partnershipCount = partnershipContentResult
-      ? (partnershipContentResult.partnerships as any[]).length
-      : 0;
+    // Pesanan baru (status PENDING)
+    const pendingOrderCount = await prisma.order.count({
+      where: { status: "PENDING" },
+    });
+
+    // Pendapatan bulan ini (status PAID / SHIPPED / DELIVERED, paidAt in current month)
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const revenueAggregate = await prisma.order.aggregate({
+      _sum: { total: true },
+      where: {
+        status: { in: ["PAID", "SHIPPED", "DELIVERED"] },
+        paidAt: { gte: startOfMonth, lt: startOfNextMonth },
+      },
+    });
+    const monthlyRevenue = revenueAggregate._sum.total ?? 0;
 
     return NextResponse.json({
       success: true,
@@ -47,6 +59,8 @@ export async function GET() {
         honeyCollectionCount,
         testimonialCount,
         partnershipCount,
+        pendingOrderCount,
+        monthlyRevenue,
       },
     });
   } catch (error) {

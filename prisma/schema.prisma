@@ -88,36 +88,49 @@ model ArticleContent {
 }
 
 model Settings {
-  id           String   @id @default(cuid())
-  siteName     String   @default("Zari Honey")
-  whatsapp     String   @default("+6285777578827")
-  instagram    String   @default("https://www.instagram.com/zarihoney")
-  email        String   @default("info@zarilife.com")
-  shopeeLink   String   @default("https://id.shp.ee/GgH8AKs")
-  mapsLocation String   @default("https://maps.app.goo.gl/Yfnw3MHWgm2YPEeU8")
-  mapsEmbed    String   @db.Text
-  whatsappOrderMessage String? @db.Text
-  whatsappResellerMessage String? @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  siteName                String   @default("Zari Honey")
+  whatsapp                String   @default("+6285777578827")
+  instagram               String   @default("https://www.instagram.com/zarihoney")
+  email                   String   @default("info@zarilife.com")
+  shopeeLink              String   @default("https://id.shp.ee/GgH8AKs")
+  mapsLocation            String   @default("https://maps.app.goo.gl/Yfnw3MHWgm2YPEeU8")
+  mapsEmbed               String   @db.Text
+  whatsappOrderMessage    String?  @db.Text
+  whatsappResellerMessage String?  @db.Text
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@map("settings")
 }
 
 model PremiumHoneyCollection {
-  id          String   @id @default(cuid())
+  id                       String   @id @default(cuid())
   honeyCollectionContentId String?
-  name        String
-  description String   @db.Text
-  price       String?
-  image       String?  @db.VarChar(500)
-  label       String?
-  features    Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  honeyCollectionContent HoneyCollectionContent? @relation(fields: [honeyCollectionContentId], references: [id], onDelete: Cascade)
+  name                     String
+  description              String   @db.Text
+  price                    String?
+  image                    String?  @db.VarChar(500)
+  label                    String?
+  features                 Json?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
+  // E-commerce extensions (TASK-001). categoryId + slug are nullable so the
+  // migration is safe on existing rows; seed.ts (TASK-003) backfills them.
+  categoryId      String?
+  slug            String? @unique
+  stock           Int     @default(0)
+  alwaysAvailable Boolean @default(false)
+  priceNumeric    Int     @default(0)
+  weightGrams     Int?
+
+  honeyCollectionContent HoneyCollectionContent? @relation(fields: [honeyCollectionContentId], references: [id], onDelete: Cascade)
+  category               Category?               @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  cartItems              CartItem[]
+  orderItems             OrderItem[]
+
+  @@index([categoryId])
   @@map("premium_honey_collections")
 }
 
@@ -127,8 +140,215 @@ model HoneyCollectionContent {
   description String   @default("Pilihan terbaik dari berbagai sumber nektar pilihan Indonesia")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  products    PremiumHoneyCollection[]
+
+  products PremiumHoneyCollection[]
 
   @@map("honey_collection_contents")
+}
+
+// =============================================================================
+// E-commerce models (TASK-001)
+// =============================================================================
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SETTLEMENT
+  EXPIRE
+  CANCEL
+  DENY
+  FAILURE
+}
+
+enum AuthProvider {
+  CREDENTIALS
+  GOOGLE
+}
+
+model Customer {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  passwordHash  String?
+  name          String
+  phone         String?
+  provider      AuthProvider @default(CREDENTIALS)
+  emailVerified DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  addresses Address[]
+  carts     Cart[]
+  orders    Order[]
+
+  @@map("customers")
+}
+
+model Category {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  description  String?  @db.Text
+  image        String?  @db.VarChar(500)
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  products PremiumHoneyCollection[]
+
+  @@map("categories")
+}
+
+model Address {
+  id            String   @id @default(cuid())
+  customerId    String
+  recipientName String
+  phone         String
+  addressLine   String   @db.Text
+  rtRw          String?
+  kelurahan     String
+  kecamatan     String
+  city          String
+  province      String
+  postalCode    String
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("addresses")
+}
+
+model Cart {
+  id           String   @id @default(cuid())
+  customerId   String?
+  sessionToken String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  customer Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items    CartItem[]
+
+  @@index([customerId])
+  @@map("carts")
+}
+
+model CartItem {
+  id               String   @id @default(cuid())
+  cartId           String
+  productId        String
+  quantity         Int
+  unitPriceNumeric Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  cart    Cart                   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product PremiumHoneyCollection @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+model Order {
+  id          String  @id @default(cuid())
+  orderNumber String  @unique
+  customerId  String?
+  guestEmail  String?
+  guestPhone  String?
+
+  // shipping address snapshot
+  recipientName String
+  addressLine   String  @db.Text
+  rtRw          String?
+  kelurahan     String
+  kecamatan     String
+  city          String
+  province      String
+  postalCode    String
+  notes         String? @db.Text
+
+  subtotal    Int
+  shippingFee Int
+  total       Int
+
+  status         OrderStatus @default(PENDING)
+  paidAt         DateTime?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  cancelledAt    DateTime?
+  cancelReason   String?
+  stockRestored  Boolean     @default(false)
+  trackingNumber String?
+  courier        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  productId    String?
+  productName  String
+  productImage String? @db.VarChar(500)
+  unitPrice    Int
+  quantity     Int
+  subtotal     Int
+
+  order   Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product PremiumHoneyCollection? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String
+  provider      String        @default("midtrans")
+  snapToken     String?
+  transactionId String?
+  paymentMethod String?
+  status        PaymentStatus @default(PENDING)
+  rawResponse   Json?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, status])
+  @@index([orderId])
+  @@map("payments")
+}
+
+model ShippingRate {
+  id            String   @id @default(cuid())
+  province      String   @unique
+  fee           Int
+  estimatedDays String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("shipping_rates")
 }

@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import { CartIcon } from "@/components/cart/CartIcon";
+
 const navigation = [
   { name: "Tentang", href: "#about" },
   { name: "Koleksi", href: "#products" },
@@ -12,6 +14,8 @@ const navigation = [
   { name: "Testimoni", href: "#testimonials" },
   { name: "Pesan Sekarang", href: "#cta" },
 ];
+
+const SHOP_LINK = { name: "Belanja", href: "/shop" } as const;
 
 export function Header() {
   const pathname = usePathname();
@@ -100,7 +104,7 @@ export function Header() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex lg:gap-x-8">
+          <div className="hidden lg:flex lg:gap-x-8 lg:items-center">
             {navigation.map((item) =>
               isHome ? (
                 <button
@@ -121,10 +125,15 @@ export function Header() {
                 </Link>
               ),
             )}
+            <Link href={SHOP_LINK.href} className={navLinkClass}>
+              {SHOP_LINK.name}
+            </Link>
+            <CartIcon />
           </div>
 
           {/* Mobile menu button */}
-          <div className="flex lg:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
+            <CartIcon />
             <button
               type="button"
               className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700"
@@ -170,6 +179,13 @@ export function Header() {
                   </Link>
                 ),
               )}
+              <Link
+                href={SHOP_LINK.href}
+                className={mobileNavLinkClass}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {SHOP_LINK.name}
+              </Link>
             </div>
           </motion.div>
         )}

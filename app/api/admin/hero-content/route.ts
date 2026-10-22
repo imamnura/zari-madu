@@ -42,14 +42,14 @@ export async function GET() {
     }
 
     // Parse JSON fields - handle both string and object
-    const parseBadges = (data: any) => {
+    const parseBadges = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
       return Array.isArray(data) ? data : [];
     };
 
-    const parseTypewriterTexts = (data: any) => {
+    const parseTypewriterTexts = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
@@ -101,14 +101,14 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    const parseBadgesForResponse = (data: any) => {
+    const parseBadgesForResponse = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
       return Array.isArray(data) ? data : [];
     };
 
-    const parseTypewriterTextsForResponse = (data: any) => {
+    const parseTypewriterTextsForResponse = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }

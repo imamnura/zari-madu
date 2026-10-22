@@ -357,10 +357,14 @@ export default function ArticlesPage() {
     imageInput.trim().length > 0 &&
     imageInput.trim() !== debouncedImageUrl.trim();
 
-  useEffect(() => {
+  // Reset status preview saat sumber gambar berubah (adjust state saat render, bukan di effect)
+  const previewKey = `${activePreviewSrc}|${urlDebouncing}|${imageUploadType}`;
+  const [prevPreviewKey, setPrevPreviewKey] = useState(previewKey);
+  if (prevPreviewKey !== previewKey) {
+    setPrevPreviewKey(previewKey);
     setImagePreviewLoaded(false);
     setImagePreviewError(false);
-  }, [activePreviewSrc, urlDebouncing, imageUploadType]);
+  }
 
   // Filter categories based on search
   const filteredCategories = CATEGORIES.filter((cat) =>
@@ -379,7 +383,7 @@ export default function ArticlesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 p-4 md:p-8">
+    <div className="min-h-screen bg-linear-to-br from-amber-50 via-orange-50 to-amber-100 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -550,7 +554,7 @@ export default function ArticlesPage() {
           <Button
             onClick={handleSave}
             disabled={!isMainFormValid() || saving}
-            className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-linear-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? (
               <>
@@ -721,17 +725,17 @@ export default function ArticlesPage() {
                     <div className="relative aspect-video bg-white rounded border border-gray-200 overflow-hidden">
                       {(urlDebouncing ||
                         (!imagePreviewError && !imagePreviewLoaded)) && (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/90">
-                          <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
-                          <span className="text-xs text-gray-500">
-                            {urlDebouncing
-                              ? "Menunggu ketikan selesai…"
-                              : "Memuat gambar…"}
-                          </span>
-                        </div>
-                      )}
+                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/90">
+                            <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                            <span className="text-xs text-gray-500">
+                              {urlDebouncing
+                                ? "Menunggu ketikan selesai…"
+                                : "Memuat gambar…"}
+                            </span>
+                          </div>
+                        )}
                       {imagePreviewError ? (
-                        <div className="flex h-full min-h-[120px] items-center justify-center px-4 text-center text-sm text-red-600">
+                        <div className="flex h-full min-h-30 items-center justify-center px-4 text-center text-sm text-red-600">
                           Gambar tidak dapat dimuat. Periksa URL atau format
                           file.
                         </div>

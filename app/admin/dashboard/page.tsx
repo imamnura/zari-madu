@@ -19,6 +19,8 @@ import {
   TrendingUp,
   Calendar,
   Activity,
+  Package,
+  DollarSign,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -28,6 +30,8 @@ export default function AdminDashboardPage() {
     honeyCollections: 0,
     testimonials: 0,
     partnerships: 0,
+    pendingOrders: 0,
+    monthlyRevenue: 0,
   });
 
   const [visitorData, setVisitorData] = useState<number[]>([
@@ -45,6 +49,8 @@ export default function AdminDashboardPage() {
             honeyCollections: data.data.honeyCollectionCount,
             testimonials: data.data.testimonialCount,
             partnerships: data.data.partnershipCount,
+            pendingOrders: data.data.pendingOrderCount ?? 0,
+            monthlyRevenue: data.data.monthlyRevenue ?? 0,
           });
         }
       } catch (error) {
@@ -55,7 +61,37 @@ export default function AdminDashboardPage() {
     fetchStats();
   }, []);
 
-  const statsData = [
+  const formatRupiah = (n: number) =>
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(n);
+
+  const statsData: Array<{
+    label: string;
+    value: string | number;
+    icon: typeof FileText;
+    color: string;
+    bgColor: string;
+    description: string;
+  }> = [
+    {
+      label: "Pesanan Baru",
+      value: stats.pendingOrders,
+      icon: Package,
+      color: "text-orange-600",
+      bgColor: "bg-orange-50",
+      description: "Menunggu pembayaran",
+    },
+    {
+      label: "Pendapatan Bulan Ini",
+      value: formatRupiah(stats.monthlyRevenue),
+      icon: DollarSign,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+      description: "PAID/SHIPPED/DELIVERED",
+    },
     {
       label: "Artikel",
       value: stats.articles,
@@ -125,8 +161,8 @@ export default function AdminDashboardPage() {
         </p>
       </div>
 
-      {/* Stats Grid dengan 4 kolom */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {statsData.map((stat) => {
           const Icon = stat.icon;
           return (

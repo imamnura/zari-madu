@@ -28,8 +28,19 @@ interface HoneyCollection {
   image?: string;
   label?: string;
   features?: string[];
+  categoryId?: string | null;
+  slug?: string | null;
+  stock?: number;
+  alwaysAvailable?: boolean;
+  priceNumeric?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+interface CategoryOption {
+  id: string;
+  slug: string;
+  name: string;
 }
 
 interface SectionContent {
@@ -59,43 +70,56 @@ export default function HoneyCollectionPage() {
     price: "",
     label: "",
     image: "",
+    categoryId: "",
+    stock: 0,
+    alwaysAvailable: false,
+    priceNumeric: 0,
   });
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
 
   // Fetch section content
-  const fetchSectionContent = async () => {
-    try {
-      const response = await fetch("/api/admin/honey-collection-content");
-      const data = await response.json();
-
-      if (data.success) {
-        setSectionContent(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching section content:", error);
-    }
-  };
+  const fetchSectionContent = () =>
+    fetch("/api/admin/honey-collection-content")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          setSectionContent(data.data);
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching section content:", error);
+      });
 
   // Fetch collections
-  const fetchCollections = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/admin/honey-collection");
-      const data = await response.json();
+  const loadCollections = () =>
+    fetch("/api/admin/honey-collection")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          setCollections(data.data);
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching collections:", error);
+        toast.error("Gagal mengambil data koleksi");
+      })
+      .finally(() => setLoading(false));
 
-      if (data.success) {
-        setCollections(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching collections:", error);
-      toast.error("Gagal mengambil data koleksi");
-    } finally {
-      setLoading(false);
-    }
+  // Refetch dengan menampilkan loading lagi (loading awal sudah true dari useState)
+  const fetchCollections = () => {
+    setLoading(true);
+    return loadCollections();
   };
 
   useEffect(() => {
-    fetchCollections();
+    loadCollections();
     fetchSectionContent();
+    fetch("/api/admin/categories", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) setCategoryOptions(j.data);
+      })
+      .catch(() => { });
   }, []);
 
   // Handle section content update
@@ -240,6 +264,10 @@ export default function HoneyCollectionPage() {
       price: collection.price || "",
       label: collection.label || "",
       image: collection.image || "",
+      categoryId: collection.categoryId || "",
+      stock: collection.stock ?? 0,
+      alwaysAvailable: collection.alwaysAvailable ?? false,
+      priceNumeric: collection.priceNumeric ?? 0,
     });
     setShowForm(true);
   };
@@ -284,6 +312,10 @@ export default function HoneyCollectionPage() {
       price: "",
       label: "",
       image: "",
+      categoryId: "",
+      stock: 0,
+      alwaysAvailable: false,
+      priceNumeric: 0,
     });
     setShowForm(false);
     setEditMode(false);
@@ -496,6 +528,78 @@ export default function HoneyCollectionPage() {
                 </div>
               </div>
 
+              {/* E-commerce fields (TASK-084) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Kategori
+                  </label>
+                  <select
+                    value={formData.categoryId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, categoryId: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  >
+                    <option value="">— Tanpa Kategori —</option>
+                    {categoryOptions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Stok
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formData.stock}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        stock: parseInt(e.target.value, 10) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Harga Numerik (Rp, untuk sort/filter)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formData.priceNumeric}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        priceNumeric: parseInt(e.target.value, 10) || 0,
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div className="flex items-center pt-6">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={formData.alwaysAvailable}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          alwaysAvailable: e.target.checked,
+                        })
+                      }
+                    />
+                    Selalu tersedia (abaikan stok)
+                  </label>
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <Button
                   type="submit"
@@ -530,7 +634,7 @@ export default function HoneyCollectionPage() {
         ) : (
           collections.map((collection) => (
             <Card key={collection.id} className="overflow-hidden">
-              <div className="relative w-full h-48 bg-gradient-to-br from-amber-100 to-amber-200">
+              <div className="relative w-full h-48 bg-linear-to-br from-amber-100 to-amber-200">
                 {collection.image ? (
                   <img
                     src={collection.image}
