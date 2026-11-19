@@ -41,10 +41,12 @@ export async function verifyTurnstileToken(
   }
 }
 
-export type TurnstileCheck = { ok: true } | { ok: false; error: string };
+export type TurnstileCheck =
+  | { ok: true }
+  | { ok: false; reason: "unavailable" | "missing" | "invalid"; error: string };
 
 /**
- * Aturan captcha untuk login admin & registrasi customer:
+ * Aturan captcha untuk login admin, login customer, dan registrasi customer:
  * - terkonfigurasi → token wajib dan harus valid;
  * - tidak terkonfigurasi di production → ditolak (fail-closed);
  * - tidak terkonfigurasi di development/test → dilewati.
@@ -60,6 +62,7 @@ export async function checkTurnstile(
       );
       return {
         ok: false,
+        reason: "unavailable",
         error: "Verifikasi keamanan sedang tidak tersedia. Silakan hubungi admin.",
       };
     }
@@ -67,10 +70,18 @@ export async function checkTurnstile(
   }
 
   if (!token?.trim()) {
-    return { ok: false, error: "Selesaikan verifikasi captcha terlebih dahulu" };
+    return {
+      ok: false,
+      reason: "missing",
+      error: "Selesaikan verifikasi captcha terlebih dahulu",
+    };
   }
   const valid = await verifyTurnstileToken(token, remoteip);
   return valid
     ? { ok: true }
-    : { ok: false, error: "Verifikasi captcha gagal. Muat ulang halaman dan coba lagi." };
+    : {
+        ok: false,
+        reason: "invalid",
+        error: "Verifikasi captcha gagal. Muat ulang halaman dan coba lagi.",
+      };
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cancelOrder } from "@/lib/orders";
 import { getServerEnv } from "@/lib/env";
+import { cleanupExpiredRateLimits } from "@/lib/rate-limit";
 
 const PENDING_TTL_HOURS = 24;
 // Pembatalan diproses paralel per gelombang; dibatasi agar tidak menghabiskan pool koneksi DB.
@@ -53,12 +54,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Housekeeping: counter rate limit yang window-nya sudah lewat tidak dibutuhkan lagi.
+    const rateLimitsCleared = await cleanupExpiredRateLimits().catch((error) => {
+      console.error("[/api/cron/expire-pending-orders POST] cleanup rate limit", error);
+      return 0;
+    });
+
     if (failed > 0) {
       return NextResponse.json(
         {
           success: false,
           error: `${failed} order gagal dibatalkan`,
-          data: { expired, scanned: stale.length, failed },
+          data: { expired, scanned: stale.length, failed, rateLimitsCleared },
         },
         { status: 500 },
       );
@@ -66,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { expired, scanned: stale.length, failed },
+      data: { expired, scanned: stale.length, failed, rateLimitsCleared },
     });
   } catch (error) {
     console.error("[/api/cron/expire-pending-orders POST]", error);

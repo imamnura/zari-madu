@@ -352,3 +352,14 @@ model ShippingRate {
 
   @@map("shipping_rates")
 }
+
+// Counter rate limit fixed-window (TD-24). Satu baris per kunci, mis. "login-customer:ip:1.2.3.4".
+// Ditulis atomik oleh lib/rate-limit.ts lewat INSERT ... ON CONFLICT; baris kedaluwarsa dibersihkan berkala.
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+  @@map("rate_limits")
+}

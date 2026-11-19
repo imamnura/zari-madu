@@ -1,13 +1,65 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { checkTurnstile } from "@/lib/turnstile";
 import { getServerEnv } from "@/lib/env";
+import { AUTH_ERROR_CODES, type AuthErrorCode } from "@/lib/auth-errors";
+import { consumeRateLimits, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 import type { Role } from "@/types/shop";
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = getServerEnv();
+
+/** Error login yang `code`-nya sampai ke client (`signIn(...).code`), lihat lib/auth-errors.ts. */
+class LoginError extends CredentialsSignin {
+  constructor(code: AuthErrorCode) {
+    super();
+    this.code = code;
+  }
+}
+
+/**
+ * Pemeriksaan sebelum mencocokkan password: rate limit (per IP dan per IP+email) lalu captcha.
+ * Rate limit dihitung lebih dulu agar percobaan dengan captcha salah pun ikut terhitung.
+ */
+async function guardCredentialsLogin(
+  kind: "admin" | "customer",
+  credentials: Partial<Record<string, unknown>>,
+  request: Request,
+): Promise<{ email: string; password: string }> {
+  const email = typeof credentials.email === "string" ? credentials.email.trim() : "";
+  const password = typeof credentials.password === "string" ? credentials.password : "";
+  if (!email || !password) {
+    throw new LoginError(AUTH_ERROR_CODES.invalidCredentials);
+  }
+
+  const ip = getClientIp(request.headers);
+  const [ipRule, accountRule] =
+    kind === "admin"
+      ? [RATE_LIMITS.adminLoginIp, RATE_LIMITS.adminLoginAccount]
+      : [RATE_LIMITS.customerLoginIp, RATE_LIMITS.customerLoginAccount];
+  const limit = await consumeRateLimits([
+    [ipRule, ip],
+    [accountRule, `${ip}:${email}`],
+  ]);
+  if (!limit.allowed) {
+    throw new LoginError(AUTH_ERROR_CODES.rateLimited);
+  }
+
+  const captcha = await checkTurnstile(
+    typeof credentials.turnstileToken === "string" ? credentials.turnstileToken : undefined,
+  );
+  if (!captcha.ok) {
+    throw new LoginError(
+      captcha.reason === "unavailable"
+        ? AUTH_ERROR_CODES.captchaUnavailable
+        : AUTH_ERROR_CODES.captchaFailed,
+    );
+  }
+
+  return { email, password };
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -19,31 +71,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
         turnstileToken: { label: "Turnstile", type: "text" },
       },
-      authorize: async (credentials) => {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email dan password harus diisi");
-        }
-
-        const captcha = await checkTurnstile(
-          credentials.turnstileToken as string | undefined,
+      authorize: async (credentials, request) => {
+        const { email, password } = await guardCredentialsLogin(
+          "admin",
+          credentials ?? {},
+          request,
         );
-        if (!captcha.ok) {
-          throw new Error(captcha.error);
-        }
 
-        const admin = await prisma.admin.findUnique({
-          where: { email: credentials.email as string },
-        });
+        const admin = await prisma.admin.findUnique({ where: { email } });
         if (!admin) {
-          throw new Error("Email atau password salah");
+          throw new LoginError(AUTH_ERROR_CODES.invalidCredentials);
         }
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          admin.password,
-        );
+        const isPasswordValid = await bcrypt.compare(password, admin.password);
         if (!isPasswordValid) {
-          throw new Error("Email atau password salah");
+          throw new LoginError(AUTH_ERROR_CODES.invalidCredentials);
         }
 
         return {
@@ -60,25 +102,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        turnstileToken: { label: "Turnstile", type: "text" },
       },
-      authorize: async (credentials) => {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email dan password harus diisi");
-        }
-
-        const customer = await prisma.customer.findUnique({
-          where: { email: credentials.email as string },
-        });
-        if (!customer || !customer.passwordHash) {
-          throw new Error("Email atau password salah");
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          customer.passwordHash,
+      authorize: async (credentials, request) => {
+        const { email, password } = await guardCredentialsLogin(
+          "customer",
+          credentials ?? {},
+          request,
         );
+
+        const customer = await prisma.customer.findUnique({ where: { email } });
+        if (!customer || !customer.passwordHash) {
+          throw new LoginError(AUTH_ERROR_CODES.invalidCredentials);
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, customer.passwordHash);
         if (!isPasswordValid) {
-          throw new Error("Email atau password salah");
+          throw new LoginError(AUTH_ERROR_CODES.invalidCredentials);
         }
 
         return {

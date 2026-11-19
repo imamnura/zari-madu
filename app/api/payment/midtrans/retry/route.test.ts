@@ -25,7 +25,21 @@ vi.mock("@/lib/prisma", () => ({
 }));
 vi.mock("@/lib/midtrans", () => ({ createSnapTransaction: createSnap }));
 
+const { consumeRateLimitMock } = vi.hoisted(() => ({ consumeRateLimitMock: vi.fn() }));
+vi.mock("@/lib/rate-limit", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/rate-limit")>()),
+  consumeRateLimit: consumeRateLimitMock,
+}));
+
+import { RATE_LIMITS } from "@/lib/rate-limit";
+
 import { POST } from "./route";
+
+beforeEach(() => {
+  consumeRateLimitMock
+    .mockReset()
+    .mockResolvedValue({ allowed: true, remaining: 9, retryAfterSeconds: 0 });
+});
 
 beforeEach(() => {
   for (const m of [
@@ -86,5 +100,15 @@ describe("POST /api/payment/midtrans/retry", () => {
     const json = await res.json();
     expect(json.success).toBe(true);
     expect(json.data.snapToken).toBe("snap-new");
+  });
+  it("returns 429 with Retry-After when the paymentRetry rate limit is exceeded", async () => {
+    consumeRateLimitMock.mockResolvedValue({ allowed: false, remaining: 0, retryAfterSeconds: 300 });
+    const res = await POST(jsonReq({}));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("300");
+    expect((await res.json()).success).toBe(false);
+    expect(consumeRateLimitMock).toHaveBeenCalledWith(RATE_LIMITS.paymentRetry, "unknown");
+    expect(orderFindUnique).not.toHaveBeenCalled();
+    expect(createSnap).not.toHaveBeenCalled();
   });
 });

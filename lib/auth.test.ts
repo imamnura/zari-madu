@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Capture the NextAuth config passed by lib/auth.ts at import time so we can
 // invoke its providers' authorize() and callbacks directly. NextAuth itself is
@@ -6,6 +6,9 @@ import { describe, it, expect, vi } from "vitest";
 const captured: { config?: Record<string, unknown> } = {};
 
 vi.mock("next-auth", () => ({
+  CredentialsSignin: class CredentialsSignin extends Error {
+    code = "credentials";
+  },
   default: (config: Record<string, unknown>) => {
     captured.config = config;
     return {
@@ -36,11 +39,33 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-vi.mock("@/lib/turnstile", () => ({
-  checkTurnstile: vi.fn().mockResolvedValue({ ok: true }),
+const { checkTurnstileMock, consumeRateLimitsMock } = vi.hoisted(() => ({
+  checkTurnstileMock: vi.fn(),
+  consumeRateLimitsMock: vi.fn(),
 }));
 
+vi.mock("@/lib/turnstile", () => ({ checkTurnstile: checkTurnstileMock }));
+vi.mock("@/lib/rate-limit", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/rate-limit")>()),
+  consumeRateLimits: consumeRateLimitsMock,
+}));
+
+beforeEach(() => {
+  checkTurnstileMock.mockReset().mockResolvedValue({ ok: true });
+  consumeRateLimitsMock
+    .mockReset()
+    .mockResolvedValue({ allowed: true, remaining: 4, retryAfterSeconds: 0 });
+});
+
+function loginRequest(ip = "203.0.113.7") {
+  return new Request("http://localhost/api/auth/callback/x", {
+    method: "POST",
+    headers: { "x-forwarded-for": `${ip}, 10.0.0.1` },
+  });
+}
+
 import { prisma } from "@/lib/prisma";
+import { RATE_LIMITS } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
 
 const mocked = prisma as unknown as {
@@ -48,12 +73,13 @@ const mocked = prisma as unknown as {
     findUnique: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
   };
+  admin: { findUnique: ReturnType<typeof vi.fn> };
 };
 
 interface IProviderShape {
   type: string;
   id: string;
-  options: { authorize?: (c: unknown) => Promise<unknown> };
+  options: { authorize?: (c: unknown, request: Request) => Promise<unknown> };
 }
 
 interface ICapturedConfig {
@@ -93,11 +119,11 @@ describe("customer credentials authorize", () => {
     const cfg = await getConfig();
     const provider = cfg.providers.find((p) => p.id === "customer-credentials")!;
     await expect(
-      provider.options.authorize!({
-        email: "no@one.com",
-        password: "secret123",
-      }),
-    ).rejects.toThrow(/Email atau password salah/);
+      provider.options.authorize!(
+        { email: "no@one.com", password: "secret123" },
+        loginRequest(),
+      ),
+    ).rejects.toMatchObject({ code: "invalid_credentials" });
   });
 
   it("returns user with role=customer when password matches", async () => {
@@ -110,11 +136,83 @@ describe("customer credentials authorize", () => {
     });
     const cfg = await getConfig();
     const provider = cfg.providers.find((p) => p.id === "customer-credentials")!;
-    const result = await provider.options.authorize!({
-      email: "sari@example.com",
-      password: "secret123",
-    });
+    const result = await provider.options.authorize!(
+      { email: "sari@example.com", password: "secret123", turnstileToken: "tok" },
+      loginRequest(),
+    );
     expect(result).toMatchObject({ id: "cus_1", role: "customer" });
+    expect(checkTurnstileMock).toHaveBeenCalledWith("tok");
+  });
+
+  it("rate limits per IP and per IP+email, then rejects without checking the password", async () => {
+    consumeRateLimitsMock.mockResolvedValue({ allowed: false, remaining: 0, retryAfterSeconds: 600 });
+    const cfg = await getConfig();
+    const provider = cfg.providers.find((p) => p.id === "customer-credentials")!;
+
+    await expect(
+      provider.options.authorize!(
+        { email: "Sari@Example.com", password: "tebak-tebakan" },
+        loginRequest("203.0.113.7"),
+      ),
+    ).rejects.toMatchObject({ code: "rate_limited" });
+
+    expect(consumeRateLimitsMock).toHaveBeenCalledWith([
+      [RATE_LIMITS.customerLoginIp, "203.0.113.7"],
+      [RATE_LIMITS.customerLoginAccount, "203.0.113.7:Sari@Example.com"],
+    ]);
+    expect(checkTurnstileMock).not.toHaveBeenCalled();
+    expect(mocked.customer.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("requires the captcha for customer login and reports why it failed", async () => {
+    checkTurnstileMock.mockResolvedValue({ ok: false, reason: "unavailable", error: "x" });
+    const cfg = await getConfig();
+    const provider = cfg.providers.find((p) => p.id === "customer-credentials")!;
+    await expect(
+      provider.options.authorize!(
+        { email: "sari@example.com", password: "secret123" },
+        loginRequest(),
+      ),
+    ).rejects.toMatchObject({ code: "captcha_unavailable" });
+    expect(mocked.customer.findUnique).not.toHaveBeenCalled();
+  });
+});
+
+describe("admin credentials authorize", () => {
+  it("uses the admin rate limit rules and rejects a bad captcha", async () => {
+    checkTurnstileMock.mockResolvedValue({ ok: false, reason: "invalid", error: "x" });
+    const cfg = await getConfig();
+    const provider = cfg.providers.find((p) => p.id === "admin-credentials")!;
+
+    await expect(
+      provider.options.authorize!(
+        { email: "admin@zarilife.com", password: "x", turnstileToken: "bad" },
+        loginRequest("198.51.100.2"),
+      ),
+    ).rejects.toMatchObject({ code: "captcha_failed" });
+
+    expect(consumeRateLimitsMock).toHaveBeenCalledWith([
+      [RATE_LIMITS.adminLoginIp, "198.51.100.2"],
+      [RATE_LIMITS.adminLoginAccount, "198.51.100.2:admin@zarilife.com"],
+    ]);
+    expect(mocked.admin.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("returns role=admin for a valid password", async () => {
+    const password = await bcrypt.hash("admin-secret", 4);
+    mocked.admin.findUnique.mockResolvedValue({
+      id: "adm_1",
+      email: "admin@zarilife.com",
+      name: "Admin",
+      password,
+    });
+    const cfg = await getConfig();
+    const provider = cfg.providers.find((p) => p.id === "admin-credentials")!;
+    const result = await provider.options.authorize!(
+      { email: "admin@zarilife.com", password: "admin-secret", turnstileToken: "tok" },
+      loginRequest(),
+    );
+    expect(result).toMatchObject({ id: "adm_1", role: "admin" });
   });
 });
 

@@ -164,6 +164,8 @@ Tabel CMS berdiri sendiri (tanpa relasi), satu baris per section dengan kolom `J
 `HeroContent`, `AboutContent`, `WhyChooseContent`, `TestimonialContent`, `PartnershipContent`,
 `ArticleContent`, `Settings`. Tabel `Admin` terpisah dari `Customer`.
 
+Tabel `RateLimit` (`rate_limits`) berdiri sendiri: counter fixed-window per kunci (`<aturan>:<ip>[:<email>]`), ditulis atomik oleh `lib/rate-limit.ts`.
+
 ## 4. Autentikasi & otorisasi
 
 ```mermaid

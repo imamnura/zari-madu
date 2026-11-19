@@ -32,7 +32,7 @@ describe("checkTurnstile when Turnstile is not configured", () => {
 
     const result = await checkTurnstile(undefined);
 
-    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ ok: false, reason: "unavailable" });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalledWith(expect.stringContaining("belum diset di production"));
   });
@@ -55,7 +55,11 @@ describe("checkTurnstile when Turnstile is configured", () => {
   it("requires a token", async () => {
     configure();
     const result = await checkTurnstile("  ");
-    expect(result).toEqual({ ok: false, error: expect.stringMatching(/Selesaikan verifikasi/) });
+    expect(result).toEqual({
+      ok: false,
+      reason: "missing",
+      error: expect.stringMatching(/Selesaikan verifikasi/),
+    });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -73,7 +77,11 @@ describe("checkTurnstile when Turnstile is configured", () => {
     configure();
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ success: false })));
     const result = await checkTurnstile("tok");
-    expect(result).toEqual({ ok: false, error: expect.stringMatching(/captcha gagal/) });
+    expect(result).toEqual({
+      ok: false,
+      reason: "invalid",
+      error: expect.stringMatching(/captcha gagal/),
+    });
   });
 });
 

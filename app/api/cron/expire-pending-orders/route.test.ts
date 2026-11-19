@@ -10,6 +10,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: { order: { findMany } },
 }));
 vi.mock("@/lib/orders", () => ({ cancelOrder }));
+vi.mock("@/lib/rate-limit", () => ({ cleanupExpiredRateLimits: vi.fn().mockResolvedValue(3) }));
 
 import { POST } from "./route";
 
@@ -60,7 +61,7 @@ describe("POST /api/cron/expire-pending-orders", () => {
     cancelOrder.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     const res = await POST(makeReq("super-secret"));
     const json = await res.json();
-    expect(json.data).toEqual({ expired: 1, scanned: 2, failed: 0 });
+    expect(json.data).toEqual({ expired: 1, scanned: 2, failed: 0, rateLimitsCleared: 3 });
   });
 
   it("cancels orders concurrently but never more than 5 at a time", async () => {
@@ -78,7 +79,7 @@ describe("POST /api/cron/expire-pending-orders", () => {
     const res = await POST(makeReq("super-secret"));
     const json = await res.json();
 
-    expect(json.data).toEqual({ expired: 12, scanned: 12, failed: 0 });
+    expect(json.data).toEqual({ expired: 12, scanned: 12, failed: 0, rateLimitsCleared: 3 });
     expect(cancelOrder).toHaveBeenCalledTimes(12);
     expect(maxInFlight).toBe(5);
   });
@@ -96,7 +97,7 @@ describe("POST /api/cron/expire-pending-orders", () => {
 
     expect(res.status).toBe(500);
     expect(json.success).toBe(false);
-    expect(json.data).toEqual({ expired: 2, scanned: 3, failed: 1 });
+    expect(json.data).toEqual({ expired: 2, scanned: 3, failed: 1, rateLimitsCleared: 3 });
     expect(cancelOrder).toHaveBeenCalledTimes(3);
     expect(consoleError).toHaveBeenCalledWith(
       "[/api/cron/expire-pending-orders POST] gagal membatalkan",

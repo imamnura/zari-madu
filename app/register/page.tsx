@@ -15,6 +15,8 @@ import {
   type RegisterCustomerInput,
 } from "@/lib/schemas/shop";
 
+const LOGIN_TOKEN_TIMEOUT_MS = 15_000;
+
 export default function RegisterPage() {
   const router = useRouter();
   const turnstileRef = useRef<TurnstileInstance>(null);
@@ -52,12 +54,26 @@ export default function RegisterPage() {
         turnstileRef.current?.reset();
         return;
       }
-      toast.success("Pendaftaran berhasil. Mengarahkan...");
-      await signIn("customer-credentials", {
+      // Login otomatis butuh token Turnstile baru (token register sudah terpakai, sekali pakai).
+      let loginToken = "";
+      if (siteKey && turnstileRef.current) {
+        turnstileRef.current.reset();
+        loginToken = await turnstileRef.current
+          .getResponsePromise(LOGIN_TOKEN_TIMEOUT_MS)
+          .catch(() => "");
+      }
+      const login = await signIn("customer-credentials", {
         email: data.email,
         password: data.password,
+        turnstileToken: loginToken,
         redirect: false,
       });
+      if (login?.error) {
+        toast.success("Pendaftaran berhasil. Silakan masuk.");
+        router.push(`/login?email=${encodeURIComponent(data.email)}`);
+        return;
+      }
+      toast.success("Pendaftaran berhasil. Mengarahkan...");
       router.push("/account");
       router.refresh();
     } finally {

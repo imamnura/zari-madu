@@ -111,6 +111,18 @@ fetch ke domain lain), tambahkan origin-nya di sana — kalau tidak, browser mem
 - Darurat bila CSP memblokir layanan di production: set `CSP_REPORT_ONLY=true` lalu redeploy
   (header dibaca saat build), perbaiki allowlist, kemudian hapus variabel tersebut.
 
+## 3c. Rate limit (sejak TD-24)
+
+- **Butuh migration**: `prisma migrate deploy` (tabel baru `rate_limits`, aditif). Tanpa tabel,
+  rate limit fail-open (permintaan tetap dilayani, error dicatat `[lib/rate-limit]`).
+- Login customer kini memakai Turnstile → key Turnstile (§3a) juga wajib untuk login customer.
+- Batas saat ini (per 15 menit kecuali disebut): login 20/IP dan 5/IP+email (admin & customer),
+  register 5/IP per jam, lacak pesanan 20/IP, retry pembayaran 10/IP, checkout 10/IP.
+  Ubah di `RATE_LIMITS` (`lib/rate-limit.ts`).
+- IP diambil dari `x-forwarded-for` (entri pertama). Di VPS, pastikan nginx menimpa header ini
+  dengan IP klien (`proxy_set_header X-Forwarded-For $remote_addr;`) agar tidak bisa dipalsukan.
+- [ ] Staging: login salah 6× dengan email sama → percobaan ke-6 ditolak "Terlalu banyak percobaan".
+
 ## 4. Konfigurasi cron (prasyarat)
 
 Endpoint `POST /api/cron/expire-pending-orders` belum terjadwal di repo (tidak ada `vercel.json`).

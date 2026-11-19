@@ -3,9 +3,13 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { registerCustomerSchema } from "@/lib/schemas/shop";
 import { checkTurnstile } from "@/lib/turnstile";
+import { consumeRateLimit, getClientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const limit = await consumeRateLimit(RATE_LIMITS.register, getClientIp(request.headers));
+    if (!limit.allowed) return tooManyRequestsResponse(limit);
+
     const body = await request.json();
     const parsed = registerCustomerSchema.safeParse(body);
     if (!parsed.success) {

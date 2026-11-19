@@ -1,12 +1,16 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { authErrorMessage } from "@/lib/auth-errors";
+
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
 
 export default function LoginPage() {
   return (
@@ -20,23 +24,34 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const returnTo = params.get("returnTo") ?? "/account";
-  const [email, setEmail] = useState("");
+  const turnstileRef = useRef<TurnstileInstance>(null);
+  const [email, setEmail] = useState(params.get("email") ?? "");
   const [password, setPassword] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const captchaRequired = Boolean(turnstileSiteKey);
   const [submitting, setSubmitting] = useState(false);
 
   const hasGoogle = Boolean(process.env.NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (captchaRequired && !turnstileToken) {
+      toast.error("Selesaikan verifikasi captcha terlebih dahulu");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await signIn("customer-credentials", {
         email,
         password,
+        turnstileToken: turnstileToken ?? "",
         redirect: false,
       });
       if (res?.error) {
-        toast.error("Email atau password salah");
+        toast.error(authErrorMessage(res.code));
+        // Token Turnstile sekali pakai: minta token baru untuk percobaan berikutnya.
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
         return;
       }
       router.push(returnTo);
@@ -70,7 +85,26 @@ function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
-        <Button type="submit" disabled={submitting} className="w-full">
+        {turnstileSiteKey ? (
+          <div className="flex min-h-[65px] justify-center">
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={turnstileSiteKey}
+              onSuccess={setTurnstileToken}
+              onExpire={() => setTurnstileToken(null)}
+              onError={() => {
+                setTurnstileToken(null);
+                toast.error("Captcha gagal dimuat. Coba refresh halaman.");
+              }}
+              options={{ language: "id", theme: "light", size: "flexible" }}
+            />
+          </div>
+        ) : null}
+        <Button
+          type="submit"
+          disabled={submitting || (captchaRequired && !turnstileToken)}
+          className="w-full"
+        >
           {submitting ? "Memproses..." : "Masuk"}
         </Button>
       </form>

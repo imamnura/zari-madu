@@ -2,10 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const { signInMock, pushMock } = vi.hoisted(() => ({
+const { signInMock, pushMock, toastErrorMock } = vi.hoisted(() => ({
   signInMock: vi.fn(),
   pushMock: vi.fn(),
+  toastErrorMock: vi.fn(),
 }));
+
+vi.mock("sonner", () => ({ toast: { error: toastErrorMock, success: vi.fn() } }));
 
 vi.mock("next-auth/react", () => ({ signIn: signInMock }));
 vi.mock("next/navigation", () => ({
@@ -26,6 +29,7 @@ import LoginPage from "./page";
 beforeEach(() => {
   signInMock.mockReset();
   pushMock.mockReset();
+  toastErrorMock.mockReset();
 });
 
 describe("LoginPage", () => {
@@ -40,9 +44,25 @@ describe("LoginPage", () => {
       expect(signInMock).toHaveBeenCalledWith("customer-credentials", {
         email: "sari@example.com",
         password: "secret123",
+        turnstileToken: "",
         redirect: false,
       });
     });
+  });
+
+  it("shows the rate limit message from the error code", async () => {
+    const user = userEvent.setup();
+    signInMock.mockResolvedValue({ error: "CredentialsSignin", code: "rate_limited", ok: false });
+    render(<LoginPage />);
+    await user.type(screen.getByLabelText("Email"), "sari@example.com");
+    await user.type(screen.getByLabelText("Password"), "secret123");
+    await user.click(screen.getByRole("button", { name: /^masuk$/i }));
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "Terlalu banyak percobaan masuk. Coba lagi dalam 15 menit.",
+      );
+    });
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it("shows links to /register and /forgot-password", () => {

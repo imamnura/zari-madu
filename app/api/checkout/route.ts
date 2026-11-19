@@ -13,9 +13,13 @@ import {
   OutOfStockError,
 } from "@/lib/orders";
 import { createSnapTransaction } from "@/lib/midtrans";
+import { consumeRateLimit, getClientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const limit = await consumeRateLimit(RATE_LIMITS.checkout, getClientIp(request.headers));
+    if (!limit.allowed) return tooManyRequestsResponse(limit);
+
     const session = await auth();
     const isCustomer = session?.user?.role === "customer";
     const body = await request.json();

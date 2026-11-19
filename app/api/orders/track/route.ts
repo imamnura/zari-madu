@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { guestOrderTrackSchema } from "@/lib/schemas/shop";
+import { consumeRateLimit, getClientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rate-limit";
 
 const GENERIC_ERROR =
   "Pesanan tidak ditemukan atau email tidak cocok";
 
 export async function POST(request: NextRequest) {
   try {
+    const limit = await consumeRateLimit(RATE_LIMITS.orderTrack, getClientIp(request.headers));
+    if (!limit.allowed) return tooManyRequestsResponse(limit);
+
     const body = await request.json();
     const parsed = guestOrderTrackSchema.safeParse(body);
     if (!parsed.success) {

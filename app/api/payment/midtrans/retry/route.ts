@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSnapTransaction } from "@/lib/midtrans";
+import { consumeRateLimit, getClientIp, RATE_LIMITS, tooManyRequestsResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const limit = await consumeRateLimit(RATE_LIMITS.paymentRetry, getClientIp(request.headers));
+    if (!limit.allowed) return tooManyRequestsResponse(limit);
+
     const body = (await request.json()) as { orderNumber?: string; email?: string };
     if (!body.orderNumber) {
       return NextResponse.json(

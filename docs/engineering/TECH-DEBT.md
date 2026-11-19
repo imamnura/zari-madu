@@ -14,7 +14,7 @@
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
 | 🟠 High | 11 | 8 |
-| 🟡 Medium | 12 | 3 |
+| 🟡 Medium | 12 | 4 |
 | ⚪ Low | 6 | 0 |
 
 ## 🔴 Critical — keamanan & integritas data
@@ -55,7 +55,7 @@
 | TD-21 | Halaman admin 500–950 baris (`articles/page.tsx` 952). | Pecah ke komponen form + hook data. | M | ⬜ |
 | TD-22 | Tidak ada validasi env terpusat; Turnstile *fail-open* bila belum dikonfigurasi di production. | `lib/env.ts` (zod), fail-closed di production. Selesai: semua env server dibaca lewat `getServerEnv()`; `instrumentation.ts` menolak start bila `DATABASE_URL`/`AUTH_SECRET` hilang dan me-log env fitur yang kosong; `checkTurnstile()` menolak login admin & registrasi di production bila Turnstile belum dikonfigurasi. Lihat DEPLOYMENT-PLAN §3a. | S | ✅ Selesai |
 | TD-23 | Tidak ada security headers (CSP, HSTS, frame-ancestors). | `headers()` di `next.config.ts`. Selesai: `lib/security-headers.ts` — CSP (allowlist Midtrans, Turnstile, GA, Google Maps; `frame-ancestors 'none'`, `object-src 'none'`), HSTS (production), X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy. `script-src` tetap `'unsafe-inline'` karena nonce mematikan ISR. Darurat: `CSP_REPORT_ONLY=true`. | S | ✅ Selesai |
-| TD-24 | Tidak ada rate limit (login, register, track order, retry, checkout); login customer tanpa captcha. | Rate limiter (Upstash/Redis atau tabel DB). | M | ⬜ |
+| TD-24 | Tidak ada rate limit (login, register, track order, retry, checkout); login customer tanpa captcha. | Rate limiter (Upstash/Redis atau tabel DB). Selesai: tabel `rate_limits` (migration `20261119120000_add_rate_limits`) + `lib/rate-limit.ts` (fixed window atomik via `INSERT ... ON CONFLICT`, fail-open bila tabel bermasalah); login admin & customer per IP dan per IP+email, register, lacak pesanan, retry pembayaran, checkout → 429 + `Retry-After`. Login customer kini memakai Turnstile; pesan login lewat kode error (`lib/auth-errors.ts`). Counter kedaluwarsa dibersihkan cron (aktif setelah TD-35). | M | ✅ Selesai |
 | TD-25 | Role di JWT tidak dicek ulang ke DB; ganti password tidak menginvalidasi sesi lama. | `tokenVersion` di Admin/Customer, cek di callback `jwt`. | M | ⬜ |
 | TD-26 | Tidak ada CI (tsc + lint + test + build). | Pipeline CI. Selesai: GitHub Actions `.github/workflows/ci.yml` (repo di GitHub) — tsc, lint, test, `prisma migrate deploy` ke Postgres kosong, build; jalan di push `master`/`develop-nextjs` dan setiap PR. | S | ✅ Selesai |
 | TD-27 | Tidak ada e2e test alur checkout. | Playwright: browse → cart → checkout (Midtrans sandbox). | M | ⬜ |
@@ -91,7 +91,7 @@ gantt
     section Sprint 3 - Fondasi
     TD-26 CI pipeline (selesai)     :done, s3a, 2026-12-03, 1d
     TD-22 TD-23 env dan headers (selesai) :done, s3b, after s3a, 1d
-    TD-24 rate limit                :s3c, after s3b, 2d
+    TD-24 rate limit (selesai)      :done, s3c, after s3b, 2d
     TD-15 incident pembayaran       :s3d, after s3c, 2d
     TD-35 jadwal cron expire        :s3e, after s3d, 1d
     section Sprint 4 - Refactor
