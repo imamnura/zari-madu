@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/api/guards";
+import { jakartaMonthRange } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -39,15 +40,13 @@ export async function GET() {
       where: { status: "PENDING" },
     });
 
-    // Pendapatan bulan ini (status PAID / SHIPPED / DELIVERED, paidAt in current month)
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    // Pendapatan bulan ini (status PAID / SHIPPED / DELIVERED, paidAt di bulan berjalan WIB)
+    const month = jakartaMonthRange();
     const revenueAggregate = await prisma.order.aggregate({
       _sum: { total: true },
       where: {
         status: { in: ["PAID", "SHIPPED", "DELIVERED"] },
-        paidAt: { gte: startOfMonth, lt: startOfNextMonth },
+        paidAt: { gte: month.start, lt: month.end },
       },
     });
     const monthlyRevenue = revenueAggregate._sum.total ?? 0;

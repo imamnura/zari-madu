@@ -1,21 +1,14 @@
 import type { Prisma } from "@prisma/client";
+import { jakartaDateParts } from "@/lib/datetime";
 
 // Kunci pg_advisory_xact_lock khusus penomoran order (nilai bebas, cukup unik di aplikasi ini).
 const ORDER_NUMBER_LOCK_KEY = 7_420_001;
 
-const jakartaDateFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: "Asia/Jakarta",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
 /** Prefix `ZH-YYYYMMDD` berdasarkan tanggal Asia/Jakarta, bukan zona waktu server. */
 function todayPrefix(now: Date = new Date()): string {
-  const parts = jakartaDateFormatter.formatToParts(now);
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((p) => p.type === type)?.value ?? "";
-  return `ZH-${part("year")}${part("month")}${part("day")}`;
+  const { year, month, day } = jakartaDateParts(now);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `ZH-${year}${pad(month)}${pad(day)}`;
 }
 
 function formatNumber(prefix: string, sequence: number): string {

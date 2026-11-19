@@ -13,7 +13,7 @@
 | Severity | Jumlah | Selesai |
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
-| 🟠 High | 11 | 1 |
+| 🟠 High | 11 | 2 |
 | 🟡 Medium | 12 | 0 |
 | ⚪ Low | 6 | 0 |
 
@@ -33,7 +33,7 @@
 | ID | Masalah | Lokasi | Perbaikan | Effort | Status |
 |---|---|---|---|---|---|
 | TD-07 | Nomor order memakai jam server (UTC di Vercel) dan sequence berbasis `count` → tanggal salah 00:00–07:00 WIB, bentrok saat ramai (P2002 → checkout 500). | `lib/orderNumber.ts` | Prefix tanggal via `Intl` zona `Asia/Jakarta`; sequence = `MAX(orderNumber)` hari itu + 1 di dalam transaksi order, diserialkan `pg_advisory_xact_lock` (tanpa migration). | S | ✅ Selesai |
-| TD-08 | Omzet bulanan dihitung dengan zona waktu server. | `app/api/admin/dashboard-stats/route.ts` | Batas bulan dalam WIB. | S | ⬜ |
+| TD-08 | Omzet bulanan dihitung dengan zona waktu server. | `app/api/admin/dashboard-stats/route.ts` | Batas bulan dalam WIB via `jakartaMonthRange()` (`lib/datetime.ts`, dipakai juga oleh nomor order). | S | ✅ Selesai |
 | TD-09 | Upload ke `public/uploads` (filesystem read-only di serverless), duplikat dengan route Cloudinary. | `app/api/admin/upload/route.ts` | Hapus route, pakai Cloudinary saja. | S | ⬜ |
 | TD-10 | Homepage: semua section `"use client"` + ~11 fetch client ke `/api/admin/*`; `/api/admin/settings` di-fetch 5×. Konten tidak terindeks Google, LCP lambat. | `components/*Section.tsx`, `Header.tsx`, `Footer.tsx` | Data layer server `lib/data/*` dengan `unstable_cache`/`"use cache"` + `revalidateTag`; komponen animasi menerima props. | M | ⬜ |
 | TD-11 | `force-dynamic` + `revalidate = 0` di `/shop`, `/articles`, `/articles/[slug]`; listing produk dimuat client-side. | `app/shop/page.tsx`, `app/articles/**` | ISR + revalidate on-demand; render listing awal di server. | M | ⬜ |
@@ -82,7 +82,7 @@ gantt
     section Sprint 1 - Keamanan
     TD-01 TD-02 TD-03 TD-04 (selesai) :done, s1a, 2026-11-19, 1d
     TD-05 TD-06 webhook dan email   :s1c, 2026-11-20, 1d
-    TD-07 TD-08 zona waktu          :s1d, after s1c, 1d
+    TD-07 TD-08 zona waktu (selesai) :done, s1d, after s1c, 1d
     TD-09 hapus upload lokal        :s1e, after s1d, 1d
     section Sprint 2 - Performa
     TD-10 data layer server + cache :s2a, 2026-11-26, 3d
