@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { restoreOrderStock } from "@/lib/orders";
+import { cancelOrder } from "@/lib/orders";
 
 const PENDING_TTL_HOURS = 24;
 
@@ -24,18 +24,15 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
 
+    // cancelOrder hanya membatalkan order yang masih PENDING saat update, jadi order
+    // yang dibayar di antara findMany dan update tidak ikut tertimpa.
     let expired = 0;
     for (const o of stale) {
-      await prisma.order.update({
-        where: { id: o.id },
-        data: {
-          status: "CANCELLED",
-          cancelledAt: new Date(),
-          cancelReason: "expired",
-        },
+      const cancelled = await cancelOrder(o.id, {
+        fromStatuses: ["PENDING"],
+        reason: "expired",
       });
-      await restoreOrderStock(o.id);
-      expired += 1;
+      if (cancelled) expired += 1;
     }
 
     return NextResponse.json({

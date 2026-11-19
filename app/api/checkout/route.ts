@@ -8,9 +8,9 @@ import {
 import { readGuestSessionToken, resolveCart } from "@/lib/cart";
 import { resolveShippingFee } from "@/lib/shipping";
 import {
+  cancelOrder,
   createOrderAndReserveStock,
   OutOfStockError,
-  restoreOrderStock,
 } from "@/lib/orders";
 import { createSnapTransaction } from "@/lib/midtrans";
 
@@ -247,15 +247,10 @@ export async function POST(request: NextRequest) {
       });
     } catch (err) {
       console.error("[/api/checkout] Midtrans init failed", err);
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: "CANCELLED",
-          cancelledAt: new Date(),
-          cancelReason: "payment_init_failed",
-        },
+      await cancelOrder(orderId, {
+        fromStatuses: ["PENDING"],
+        reason: "payment_init_failed",
       });
-      await restoreOrderStock(orderId);
       return NextResponse.json(
         { success: false, error: "Gagal memulai pembayaran. Coba lagi." },
         { status: 502 },

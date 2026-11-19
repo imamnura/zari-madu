@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api/guards";
 import { z } from "zod";
 
 const articleSchema = z.object({
@@ -72,7 +72,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

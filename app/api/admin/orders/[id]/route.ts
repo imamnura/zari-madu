@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { adminOrderTransitionSchema } from "@/lib/schemas/shop";
-import { restoreOrderStock } from "@/lib/orders";
+import { cancelOrder } from "@/lib/orders";
 import { sendOrderShippedEmail } from "@/lib/email";
-import type { OrderStatus } from "@prisma/client";
+import type { OrderStatus, Prisma } from "@prisma/client";
 
 const LEGAL_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PENDING: ["CANCELLED"],
@@ -98,29 +98,45 @@ export async function PATCH(
 
     const target = parsed.data.targetStatus;
     const now = new Date();
-    const updateData: Record<string, unknown> = { status: target };
-    if (target === "SHIPPED") {
-      updateData.shippedAt = now;
-      updateData.trackingNumber = parsed.data.trackingNumber!;
-      updateData.courier = parsed.data.courier!;
-    }
-    if (target === "DELIVERED") {
-      updateData.deliveredAt = now;
-    }
+    let applied: boolean;
     if (target === "CANCELLED") {
-      updateData.cancelledAt = now;
-      updateData.cancelReason = parsed.data.cancelReason ?? "admin_cancel";
+      // Barang yang sudah dikirim tidak kembali ke gudang, jadi stok tidak dipulihkan.
+      applied = await cancelOrder(id, {
+        fromStatuses: [order.status],
+        reason: parsed.data.cancelReason ?? "admin_cancel",
+        restoreStock: order.status !== "SHIPPED",
+      });
+    } else {
+      const updateData: Prisma.OrderUpdateManyMutationInput = { status: target };
+      if (target === "SHIPPED") {
+        updateData.shippedAt = now;
+        updateData.trackingNumber = parsed.data.trackingNumber!;
+        updateData.courier = parsed.data.courier!;
+      }
+      if (target === "DELIVERED") {
+        updateData.deliveredAt = now;
+      }
+      const { count } = await prisma.order.updateMany({
+        where: { id, status: order.status },
+        data: updateData,
+      });
+      applied = count > 0;
     }
 
-    const updated = await prisma.order.update({
+    if (!applied) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Status pesanan sudah berubah. Muat ulang halaman lalu coba lagi.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const updated = await prisma.order.findUniqueOrThrow({
       where: { id },
-      data: updateData,
       include: { items: true },
     });
-
-    if (target === "CANCELLED" && order.status !== "SHIPPED" && order.status !== "DELIVERED") {
-      await restoreOrderStock(id);
-    }
 
     if (target === "SHIPPED") {
       const recipient = updated.guestEmail ??

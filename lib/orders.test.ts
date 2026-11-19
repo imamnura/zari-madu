@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const findManyMock = vi.fn();
 const updateMock = vi.fn();
+const updateManyMock = vi.fn();
 const orderCreateMock = vi.fn();
 const cartItemDeleteManyMock = vi.fn();
-const orderFindUniqueMock = vi.fn();
-const orderUpdateMock = vi.fn();
-const productFindUniqueMock = vi.fn();
+const orderUpdateManyMock = vi.fn();
+const orderItemFindManyMock = vi.fn();
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -16,13 +16,13 @@ vi.mock("@/lib/prisma", () => ({
           premiumHoneyCollection: {
             findMany: findManyMock,
             update: updateMock,
-            findUnique: productFindUniqueMock,
+            updateMany: updateManyMock,
           },
           order: {
             create: orderCreateMock,
-            findUnique: orderFindUniqueMock,
-            update: orderUpdateMock,
+            updateMany: orderUpdateManyMock,
           },
+          orderItem: { findMany: orderItemFindManyMock },
           cartItem: { deleteMany: cartItemDeleteManyMock },
         }),
       ),
@@ -35,7 +35,7 @@ vi.mock("@/lib/orderNumber", () => ({
 
 import {
   createOrderAndReserveStock,
-  restoreOrderStock,
+  cancelOrder,
   OutOfStockError,
 } from "./orders";
 
@@ -63,11 +63,11 @@ beforeEach(() => {
   for (const m of [
     findManyMock,
     updateMock,
+    updateManyMock,
     orderCreateMock,
     cartItemDeleteManyMock,
-    orderFindUniqueMock,
-    orderUpdateMock,
-    productFindUniqueMock,
+    orderUpdateManyMock,
+    orderItemFindManyMock,
   ]) {
     m.mockReset();
   }
@@ -94,7 +94,7 @@ describe("createOrderAndReserveStock", () => {
         shippingFee: 15000,
       }),
     ).rejects.toBeInstanceOf(OutOfStockError);
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(updateManyMock).not.toHaveBeenCalled();
     expect(orderCreateMock).not.toHaveBeenCalled();
   });
 
@@ -102,6 +102,7 @@ describe("createOrderAndReserveStock", () => {
     findManyMock.mockResolvedValue([
       { id: "p1", name: "Madu", image: null, stock: 5, alwaysAvailable: false, priceNumeric: 100000 },
     ]);
+    updateManyMock.mockResolvedValue({ count: 1 });
     orderCreateMock.mockResolvedValue({ id: "o1", orderNumber: "ZH-20260512-0001" });
 
     const result = await createOrderAndReserveStock({
@@ -119,8 +120,8 @@ describe("createOrderAndReserveStock", () => {
       shippingFee: 15000,
     });
 
-    expect(updateMock).toHaveBeenCalledWith({
-      where: { id: "p1" },
+    expect(updateManyMock).toHaveBeenCalledWith({
+      where: { id: "p1", stock: { gte: 2 } },
       data: { stock: { decrement: 2 } },
     });
     expect(orderCreateMock).toHaveBeenCalledOnce();
@@ -149,44 +150,91 @@ describe("createOrderAndReserveStock", () => {
       shippingFee: 0,
     });
 
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(updateManyMock).not.toHaveBeenCalled();
+  });
+
+  it("throws OutOfStockError when a concurrent checkout took the stock first", async () => {
+    // Pre-check melihat stok 5, tetapi saat decrement stok sudah diambil order lain.
+    findManyMock.mockResolvedValue([
+      { id: "p1", name: "Madu", image: null, stock: 5, alwaysAvailable: false, priceNumeric: 100000 },
+    ]);
+    updateManyMock.mockResolvedValue({ count: 0 });
+
+    await expect(
+      createOrderAndReserveStock({
+        cart: sampleCart,
+        address: {
+          recipientName: "Sari",
+          addressLine: "Jl. 1",
+          kelurahan: "x",
+          kecamatan: "x",
+          city: "x",
+          province: "DKI Jakarta",
+          postalCode: "10310",
+        },
+        contact: { customerId: null, guestEmail: "x@y.z", guestPhone: "08111111111" },
+        shippingFee: 15000,
+      }),
+    ).rejects.toBeInstanceOf(OutOfStockError);
+    expect(orderCreateMock).not.toHaveBeenCalled();
   });
 });
 
-describe("restoreOrderStock", () => {
-  it("is a no-op when order does not exist", async () => {
-    orderFindUniqueMock.mockResolvedValue(null);
-    await expect(restoreOrderStock("missing")).resolves.toBeUndefined();
+describe("cancelOrder", () => {
+  it("does nothing when the order is no longer in an allowed status", async () => {
+    // Mis. webhook sudah menandai PAID sebelum cron sempat membatalkan.
+    orderUpdateManyMock.mockResolvedValueOnce({ count: 0 });
+    const cancelled = await cancelOrder("o1", { fromStatuses: ["PENDING"], reason: "expired" });
+    expect(cancelled).toBe(false);
+    expect(orderUpdateManyMock).toHaveBeenCalledOnce();
+    expect(orderUpdateManyMock).toHaveBeenCalledWith({
+      where: { id: "o1", status: { in: ["PENDING"] } },
+      data: expect.objectContaining({ status: "CANCELLED", cancelReason: "expired" }),
+    });
     expect(updateMock).not.toHaveBeenCalled();
   });
 
-  it("is a no-op when stock has already been restored", async () => {
-    orderFindUniqueMock.mockResolvedValue({
-      id: "o1",
-      status: "CANCELLED",
-      stockRestored: true,
-      items: [{ productId: "p1", quantity: 2 }],
-    });
-    await restoreOrderStock("o1");
-    expect(updateMock).not.toHaveBeenCalled();
-  });
+  it("cancels and restores stock for non-always-available items", async () => {
+    orderUpdateManyMock
+      .mockResolvedValueOnce({ count: 1 }) // status -> CANCELLED
+      .mockResolvedValueOnce({ count: 1 }); // klaim stockRestored
+    orderItemFindManyMock.mockResolvedValue([
+      { productId: "p1", quantity: 2, product: { alwaysAvailable: false } },
+      { productId: "p2", quantity: 1, product: { alwaysAvailable: true } },
+    ]);
 
-  it("restores stock for non-always-available items", async () => {
-    orderFindUniqueMock.mockResolvedValue({
-      id: "o1",
-      status: "CANCELLED",
-      stockRestored: false,
-      items: [{ productId: "p1", quantity: 2 }],
+    const cancelled = await cancelOrder("o1", { fromStatuses: ["PENDING"], reason: "expired" });
+
+    expect(cancelled).toBe(true);
+    expect(orderUpdateManyMock).toHaveBeenLastCalledWith({
+      where: { id: "o1", status: "CANCELLED", stockRestored: false },
+      data: { stockRestored: true },
     });
-    productFindUniqueMock.mockResolvedValue({ alwaysAvailable: false });
-    await restoreOrderStock("o1");
+    expect(updateMock).toHaveBeenCalledOnce();
     expect(updateMock).toHaveBeenCalledWith({
       where: { id: "p1" },
       data: { stock: { increment: 2 } },
     });
-    expect(orderUpdateMock).toHaveBeenCalledWith({
-      where: { id: "o1" },
-      data: { stockRestored: true },
+  });
+
+  it("does not restore stock twice when it was already restored", async () => {
+    orderUpdateManyMock
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    await cancelOrder("o1", { fromStatuses: ["PENDING"], reason: "x" });
+    expect(orderItemFindManyMock).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("skips stock restore when restoreStock is false (order already shipped)", async () => {
+    orderUpdateManyMock.mockResolvedValueOnce({ count: 1 });
+    const cancelled = await cancelOrder("o1", {
+      fromStatuses: ["SHIPPED"],
+      reason: "lost_in_transit",
+      restoreStock: false,
     });
+    expect(cancelled).toBe(true);
+    expect(orderUpdateManyMock).toHaveBeenCalledOnce();
+    expect(updateMock).not.toHaveBeenCalled();
   });
 });

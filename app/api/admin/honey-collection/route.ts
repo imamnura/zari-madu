@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
 
 /** Section row used to group products; same defaults as honey-collection-content GET. */
@@ -45,7 +45,7 @@ export async function GET() {
 // POST - Create new premium honey collection
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
 
     if (!session) {
       return NextResponse.json(
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 // PUT - Update premium honey collection
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
 
     if (!session) {
       return NextResponse.json(
@@ -221,7 +221,7 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete premium honey collection
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },

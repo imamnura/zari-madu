@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type OrderStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { generateOrderNumber } from "@/lib/orderNumber";
 import type { ICartView } from "@/types/shop";
@@ -77,14 +77,21 @@ export async function createOrderAndReserveStock(
       throw new OutOfStockError(outOfStock);
     }
 
+    // Decrement bersyarat: cek stok di atas bisa basi jika ada checkout paralel,
+    // jadi kondisi `stock >= quantity` harus ikut di query update.
     for (const item of input.cart.items) {
       const product = productMap.get(item.productId);
       if (!product) continue;
       if (product.alwaysAvailable) continue;
-      await tx.premiumHoneyCollection.update({
-        where: { id: item.productId },
+      const { count } = await tx.premiumHoneyCollection.updateMany({
+        where: { id: item.productId, stock: { gte: item.quantity } },
         data: { stock: { decrement: item.quantity } },
       });
+      if (count === 0) {
+        throw new OutOfStockError([
+          { productId: item.productId, productName: product.name },
+        ]);
+      }
     }
 
     const orderNumber = await generateOrderNumber();
@@ -133,34 +140,62 @@ export async function createOrderAndReserveStock(
   });
 }
 
-export async function restoreOrderStock(orderId: string): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({
-      where: { id: orderId },
-      include: { items: true },
-    });
-    if (!order) return;
-    if (order.stockRestored) return;
-    if (order.status === "SHIPPED" || order.status === "DELIVERED") return;
+interface ICancelOrderOptions {
+  /** Status asal yang boleh dibatalkan; jika status sudah berubah, tidak terjadi apa-apa. */
+  fromStatuses: OrderStatus[];
+  reason: string;
+  restoreStock?: boolean;
+}
 
-    for (const item of order.items) {
-      if (!item.productId) continue;
-      const product = await tx.premiumHoneyCollection.findUnique({
-        where: { id: item.productId },
-        select: { alwaysAvailable: true },
-      });
-      if (!product || product.alwaysAvailable) continue;
-      await tx.premiumHoneyCollection.update({
-        where: { id: item.productId },
-        data: { stock: { increment: item.quantity } },
-      });
-    }
-
-    await tx.order.update({
-      where: { id: orderId },
-      data: { stockRestored: true },
+/**
+ * Batalkan order secara atomik: update hanya terjadi jika status saat ini masih
+ * salah satu `fromStatuses`, sehingga order yang baru saja PAID (mis. webhook masuk
+ * bersamaan dengan cron) tidak tertimpa jadi CANCELLED.
+ *
+ * @returns true jika order benar-benar dibatalkan oleh pemanggil ini.
+ */
+export async function cancelOrder(
+  orderId: string,
+  { fromStatuses, reason, restoreStock = true }: ICancelOrderOptions,
+): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.order.updateMany({
+      where: { id: orderId, status: { in: fromStatuses } },
+      data: { status: "CANCELLED", cancelledAt: new Date(), cancelReason: reason },
     });
+    if (count === 0) return false;
+    if (restoreStock) await restoreCancelledOrderStock(tx, orderId);
+    return true;
   });
+}
+
+async function restoreCancelledOrderStock(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+): Promise<void> {
+  // Klaim flag lebih dulu agar stok tidak pernah dikembalikan dua kali.
+  const { count } = await tx.order.updateMany({
+    where: { id: orderId, status: "CANCELLED", stockRestored: false },
+    data: { stockRestored: true },
+  });
+  if (count === 0) return;
+
+  const items = await tx.orderItem.findMany({
+    where: { orderId, productId: { not: null } },
+    select: {
+      productId: true,
+      quantity: true,
+      product: { select: { alwaysAvailable: true } },
+    },
+  });
+
+  for (const item of items) {
+    if (!item.productId || !item.product || item.product.alwaysAvailable) continue;
+    await tx.premiumHoneyCollection.update({
+      where: { id: item.productId },
+      data: { stock: { increment: item.quantity } },
+    });
+  }
 }
 
 export function isPrismaUniqueViolation(error: unknown): boolean {

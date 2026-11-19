@@ -7,10 +7,9 @@ const {
   readGuestSessionTokenMock,
   resolveShippingFeeMock,
   createOrderMock,
-  restoreStockMock,
+  cancelOrderMock,
   createSnapMock,
   orderFindUniqueMock,
-  orderUpdateMock,
   paymentCreateMock,
 } = vi.hoisted(() => ({
   authMock: vi.fn(),
@@ -18,10 +17,9 @@ const {
   readGuestSessionTokenMock: vi.fn(),
   resolveShippingFeeMock: vi.fn(),
   createOrderMock: vi.fn(),
-  restoreStockMock: vi.fn(),
+  cancelOrderMock: vi.fn(),
   createSnapMock: vi.fn(),
   orderFindUniqueMock: vi.fn(),
-  orderUpdateMock: vi.fn(),
   paymentCreateMock: vi.fn(),
 }));
 
@@ -38,7 +36,7 @@ vi.mock("@/lib/orders", async () => {
   return {
     ...actual,
     createOrderAndReserveStock: createOrderMock,
-    restoreOrderStock: restoreStockMock,
+    cancelOrder: cancelOrderMock,
   };
 });
 vi.mock("@/lib/midtrans", () => ({
@@ -48,7 +46,6 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     order: {
       findUnique: orderFindUniqueMock,
-      update: orderUpdateMock,
     },
     payment: { create: paymentCreateMock },
     customer: { findUnique: vi.fn().mockResolvedValue(null) },
@@ -85,10 +82,9 @@ beforeEach(() => {
     readGuestSessionTokenMock,
     resolveShippingFeeMock,
     createOrderMock,
-    restoreStockMock,
+    cancelOrderMock,
     createSnapMock,
     orderFindUniqueMock,
-    orderUpdateMock,
     paymentCreateMock,
   ]) {
     m.mockReset();
@@ -164,12 +160,9 @@ describe("POST /api/checkout (guest)", () => {
 
     const res = await POST(jsonReq(guestBody));
     expect(res.status).toBe(502);
-    expect(orderUpdateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "o1" },
-        data: expect.objectContaining({ status: "CANCELLED" }),
-      }),
-    );
-    expect(restoreStockMock).toHaveBeenCalledWith("o1");
+    expect(cancelOrderMock).toHaveBeenCalledWith("o1", {
+      fromStatuses: ["PENDING"],
+      reason: "payment_init_failed",
+    });
   });
 });

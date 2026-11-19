@@ -5,7 +5,7 @@ import {
   mapTransactionStatusToPayment,
   verifyNotificationSignature,
 } from "@/lib/midtrans";
-import { restoreOrderStock } from "@/lib/orders";
+import { cancelOrder } from "@/lib/orders";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import type { IMidtransNotification, IOrderView } from "@/types/shop";
 
@@ -101,29 +101,40 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (targetOrderStatus === "PAID" && order.status === "PENDING") {
-      const updated = await prisma.order.update({
-        where: { id: order.id },
+    if (targetOrderStatus === "PAID") {
+      // Update bersyarat: hanya order yang masih PENDING yang boleh jadi PAID,
+      // sehingga notifikasi ganda/paralel tidak mengirim email dua kali.
+      const { count } = await prisma.order.updateMany({
+        where: { id: order.id, status: "PENDING" },
         data: { status: "PAID", paidAt: new Date() },
-        include: { items: true },
       });
-      const recipient = updated.guestEmail ??
-        (updated.customerId
-          ? (await prisma.customer.findUnique({ where: { id: updated.customerId } }))?.email
-          : null);
-      if (recipient) {
-        await sendOrderConfirmationEmail(toOrderView(updated), recipient);
+      if (count === 0) {
+        if (order.status === "CANCELLED") {
+          // Dana masuk untuk order yang sudah batal (expired/cancel) — perlu tindak lanjut admin.
+          console.error(
+            "[midtrans-webhook] PAID_AFTER_CANCEL",
+            order.orderNumber,
+            body.transaction_id,
+          );
+        }
+      } else {
+        const updated = await prisma.order.findUnique({
+          where: { id: order.id },
+          include: { items: true },
+        });
+        const recipient = updated?.guestEmail ??
+          (updated?.customerId
+            ? (await prisma.customer.findUnique({ where: { id: updated.customerId } }))?.email
+            : null);
+        if (updated && recipient) {
+          await sendOrderConfirmationEmail(toOrderView(updated), recipient);
+        }
       }
-    } else if (targetOrderStatus === "CANCELLED" && order.status === "PENDING") {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: "CANCELLED",
-          cancelledAt: new Date(),
-          cancelReason: `midtrans_${body.transaction_status}`,
-        },
+    } else if (targetOrderStatus === "CANCELLED") {
+      await cancelOrder(order.id, {
+        fromStatuses: ["PENDING"],
+        reason: `midtrans_${body.transaction_status}`,
       });
-      await restoreOrderStock(order.id);
     }
 
     return NextResponse.json({ success: true });

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { sanitizeRichHtml } from "@/lib/sanitize";
 import { ProductDetail } from "@/components/shop/ProductDetail";
 import type { IProduct } from "@/types/shop";
 
@@ -39,7 +40,9 @@ export default async function ProductSlugPage({ params }: IProductPageProps) {
     id: dbProduct.id,
     slug: dbProduct.slug ?? dbProduct.id,
     name: dbProduct.name,
-    description: dbProduct.description,
+    // ProductDetail me-render deskripsi sebagai HTML; sanitize di server agar
+    // sanitize-html tidak ikut ter-bundle ke client.
+    description: sanitizeRichHtml(dbProduct.description),
     image: dbProduct.image,
     label: dbProduct.label,
     price: dbProduct.price,
