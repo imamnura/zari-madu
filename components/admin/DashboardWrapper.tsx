@@ -1,8 +1,9 @@
 "use client";
 
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import { useSidebarExpanded } from "@/hooks/useSidebarExpanded";
 
 interface DashboardWrapperProps {
   children: ReactNode;
@@ -17,30 +18,8 @@ export default function DashboardWrapper({
   user,
 }: DashboardWrapperProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
-
-  // Listen to localStorage changes for sidebar state
-  useEffect(() => {
-    const checkSidebarState = () => {
-      const savedState = localStorage.getItem("sidebarExpanded");
-      if (savedState !== null) {
-        setSidebarExpanded(savedState === "true");
-      }
-    };
-
-    checkSidebarState();
-
-    // Listen for storage events
-    window.addEventListener("storage", checkSidebarState);
-
-    // Also check periodically for same-tab changes
-    const interval = setInterval(checkSidebarState, 100);
-
-    return () => {
-      window.removeEventListener("storage", checkSidebarState);
-      clearInterval(interval);
-    };
-  }, []);
+  // Satu sumber state untuk sidebar dan padding konten (tanpa polling localStorage)
+  const [sidebarExpanded, toggleSidebarExpanded] = useSidebarExpanded();
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -52,7 +31,12 @@ export default function DashboardWrapper({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminSidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <AdminSidebar
+        isOpen={sidebarOpen}
+        onClose={closeSidebar}
+        isExpanded={sidebarExpanded}
+        onToggleExpanded={toggleSidebarExpanded}
+      />
       <div
         className={`transition-all duration-300 ${
           sidebarExpanded ? "lg:pl-64" : "lg:pl-20"

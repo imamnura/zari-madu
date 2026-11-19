@@ -19,20 +19,6 @@ import {
   Tag,
   Truck,
 } from "lucide-react";
-import { useSyncExternalStore } from "react";
-
-const SIDEBAR_EXPANDED_KEY = "sidebarExpanded";
-const SIDEBAR_EXPANDED_EVENT = "sidebar-expanded-change";
-
-function subscribeSidebarExpanded(callback: () => void) {
-  window.addEventListener("storage", callback);
-  window.addEventListener(SIDEBAR_EXPANDED_EVENT, callback);
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener(SIDEBAR_EXPANDED_EVENT, callback);
-  };
-}
-
 const menuItems = [
   {
     label: "Dashboard",
@@ -99,21 +85,17 @@ const menuItems = [
 interface AdminSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
 }
 
-export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({
+  isOpen,
+  onClose,
+  isExpanded,
+  onToggleExpanded,
+}: AdminSidebarProps) {
   const pathname = usePathname();
-  // Expanded state disimpan di localStorage (default true, termasuk saat SSR)
-  const isExpanded = useSyncExternalStore(
-    subscribeSidebarExpanded,
-    () => localStorage.getItem(SIDEBAR_EXPANDED_KEY) !== "false",
-    () => true,
-  );
-
-  const toggleExpanded = () => {
-    localStorage.setItem(SIDEBAR_EXPANDED_KEY, String(!isExpanded));
-    window.dispatchEvent(new Event(SIDEBAR_EXPANDED_EVENT));
-  };
 
   return (
     <>
@@ -198,7 +180,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           {/* Toggle Button - Desktop only */}
           <div className="hidden lg:block px-4 py-4 border-t border-gray-200">
             <button
-              onClick={toggleExpanded}
+              onClick={onToggleExpanded}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
               title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
             >
