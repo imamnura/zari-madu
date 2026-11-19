@@ -37,8 +37,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 vi.mock("@/lib/turnstile", () => ({
-  isTurnstileConfigured: () => false,
-  verifyTurnstileToken: vi.fn(),
+  checkTurnstile: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 import { prisma } from "@/lib/prisma";

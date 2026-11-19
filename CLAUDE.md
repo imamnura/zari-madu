@@ -51,6 +51,7 @@ lib/
   cart.ts              # resolve cart (customer / guest cookie), merge guest cart
   midtrans.ts          # Snap transaction, verifikasi signature, mapping status
   shipping.ts, orderNumber.ts, email.ts, turnstile.ts, cloudinary.ts
+  env.ts               # satu pintu baca env server (zod) + cek env wajib production
   schemas/shop.ts      # zod schema input (checkout, cart, order transition, dll)
   data/content.ts      # getter konten publik ber-cache (tag) + revalidateContent untuk route admin
   data/products.ts     # query listing produk (/shop & /api/products), tidak di-cache karena stok

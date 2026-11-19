@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
+import { getServerEnv } from "@/lib/env";
 
 interface IPageProps {
   searchParams: Promise<{ orderId?: string }>;
 }
 
 function whatsappLink(orderNumber: string): string {
-  const phone = process.env.WHATSAPP_ADMIN_PHONE?.replace(/\D/g, "") || "6285777578827";
+  const phone = getServerEnv().WHATSAPP_ADMIN_PHONE?.replace(/\D/g, "") || "6285777578827";
   const text = encodeURIComponent(
     `Halo Admin Zari Honey, saya baru saja menyelesaikan pembayaran untuk pesanan ${orderNumber}.`,
   );

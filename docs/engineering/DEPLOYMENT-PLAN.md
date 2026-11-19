@@ -85,6 +85,19 @@ flowchart TD
 - VPS: `git checkout <commit-sebelumnya> && pnpm build && pm2 reload zari-madu`.
 - Aman dilakukan kapan saja: rilis 1 tidak mengubah schema maupun format data.
 
+## 3a. Environment variable production (wajib sejak TD-22)
+
+Env server dibaca lewat `lib/env.ts`; `instrumentation.ts` memeriksanya saat server start.
+
+- **Fatal** (server menolak start): `DATABASE_URL`, `AUTH_SECRET` (atau `NEXTAUTH_SECRET`).
+- **Fail-closed per fitur** (server tetap jalan, error dicatat di log `[lib/env]`):
+  `TURNSTILE_SECRET_KEY` + `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — **tanpa keduanya login admin dan
+  registrasi customer ditolak di production**; `MIDTRANS_SERVER_KEY` (checkout), `RESEND_API_KEY`
+  (email), `CLOUDINARY_*` (upload), `CRON_SECRET` (cron).
+- [ ] Sebelum deploy rilis yang memuat TD-22: pastikan key Turnstile sudah terisi di environment
+      Production **dan** Preview (Preview juga berjalan dengan `NODE_ENV=production`).
+- [ ] Setelah deploy: cek log start tidak memuat `[lib/env] Env production belum diset`.
+
 ## 4. Konfigurasi cron (prasyarat)
 
 Endpoint `POST /api/cron/expire-pending-orders` belum terjadwal di repo (tidak ada `vercel.json`).

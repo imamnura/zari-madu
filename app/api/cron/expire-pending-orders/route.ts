@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cancelOrder } from "@/lib/orders";
+import { getServerEnv } from "@/lib/env";
 
 const PENDING_TTL_HOURS = 24;
 // Pembatalan diproses paralel per gelombang; dibatasi agar tidak menghabiskan pool koneksi DB.
@@ -8,7 +9,7 @@ const CANCEL_CONCURRENCY = 5;
 
 export async function POST(request: NextRequest) {
   try {
-    const expectedSecret = process.env.CRON_SECRET;
+    const expectedSecret = getServerEnv().CRON_SECRET;
     const authHeader = request.headers.get("authorization") ?? "";
     const token = authHeader.startsWith("Bearer ")
       ? authHeader.slice("Bearer ".length)

@@ -1,14 +1,15 @@
 import { Resend } from "resend";
 import type { IOrderView } from "@/types/shop";
+import { getServerEnv } from "@/lib/env";
 
 function getResendClient(): Resend | null {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const apiKey = getServerEnv().RESEND_API_KEY;
   if (!apiKey) return null;
   return new Resend(apiKey);
 }
 
 function getFromAddress(): string {
-  return process.env.EMAIL_FROM?.trim() || "Zari Honey <noreply@zarilife.com>";
+  return getServerEnv().EMAIL_FROM || "Zari Honey <noreply@zarilife.com>";
 }
 
 function formatRupiah(amount: number): string {
@@ -47,7 +48,7 @@ function buildItemRows(order: IOrderView): string {
 }
 
 function whatsappFallbackLink(orderNumber: string): string {
-  const phone = process.env.WHATSAPP_ADMIN_PHONE?.replace(/\D/g, "") || "6285777578827";
+  const phone = getServerEnv().WHATSAPP_ADMIN_PHONE?.replace(/\D/g, "") || "6285777578827";
   const text = encodeURIComponent(
     `Halo Admin Zari Honey, saya ingin menanyakan pesanan ${orderNumber}.`,
   );

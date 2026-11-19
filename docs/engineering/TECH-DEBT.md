@@ -14,7 +14,7 @@
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
 | 🟠 High | 11 | 8 |
-| 🟡 Medium | 12 | 1 |
+| 🟡 Medium | 12 | 2 |
 | ⚪ Low | 6 | 0 |
 
 ## 🔴 Critical — keamanan & integritas data
@@ -53,7 +53,7 @@
 | TD-19 | Produk: dua sumber harga (`price` String + `priceNumeric`), nama model `PremiumHoneyCollection`, tanpa `isActive`/soft-delete, CRUD tanpa zod. | Konsolidasi harga, zod schema, rename bertahap. | M | ⬜ |
 | TD-20 | Duplikasi: mapper `toOrderView` (webhook & admin inline), helper `JSON.parse` di tiap route konten, guard auth admin lama di categories/orders/shipping-rates. | `lib/mappers/order.ts`, `lib/content.ts`, pakai `getAdminSession` di semua route. | S | ⬜ |
 | TD-21 | Halaman admin 500–950 baris (`articles/page.tsx` 952). | Pecah ke komponen form + hook data. | M | ⬜ |
-| TD-22 | Tidak ada validasi env terpusat; Turnstile *fail-open* bila belum dikonfigurasi di production. | `lib/env.ts` (zod), fail-closed di production. | S | ⬜ |
+| TD-22 | Tidak ada validasi env terpusat; Turnstile *fail-open* bila belum dikonfigurasi di production. | `lib/env.ts` (zod), fail-closed di production. Selesai: semua env server dibaca lewat `getServerEnv()`; `instrumentation.ts` menolak start bila `DATABASE_URL`/`AUTH_SECRET` hilang dan me-log env fitur yang kosong; `checkTurnstile()` menolak login admin & registrasi di production bila Turnstile belum dikonfigurasi. Lihat DEPLOYMENT-PLAN §3a. | S | ✅ Selesai |
 | TD-23 | Tidak ada security headers (CSP, HSTS, frame-ancestors). | `headers()` di `next.config.ts`. | S | ⬜ |
 | TD-24 | Tidak ada rate limit (login, register, track order, retry, checkout); login customer tanpa captcha. | Rate limiter (Upstash/Redis atau tabel DB). | M | ⬜ |
 | TD-25 | Role di JWT tidak dicek ulang ke DB; ganti password tidak menginvalidasi sesi lama. | `tokenVersion` di Admin/Customer, cek di callback `jwt`. | M | ⬜ |

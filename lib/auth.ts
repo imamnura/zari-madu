@@ -3,11 +3,11 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import {
-  isTurnstileConfigured,
-  verifyTurnstileToken,
-} from "@/lib/turnstile";
+import { checkTurnstile } from "@/lib/turnstile";
+import { getServerEnv } from "@/lib/env";
 import type { Role } from "@/types/shop";
+
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = getServerEnv();
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -24,15 +24,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("Email dan password harus diisi");
         }
 
-        if (isTurnstileConfigured()) {
-          const token = credentials.turnstileToken as string | undefined;
-          if (!token?.trim()) {
-            throw new Error("Selesaikan verifikasi captcha terlebih dahulu");
-          }
-          const ok = await verifyTurnstileToken(token);
-          if (!ok) {
-            throw new Error("Verifikasi captcha gagal. Muat ulang halaman dan coba lagi.");
-          }
+        const captcha = await checkTurnstile(
+          credentials.turnstileToken as string | undefined,
+        );
+        if (!captcha.ok) {
+          throw new Error(captcha.error);
         }
 
         const admin = await prisma.admin.findUnique({
@@ -93,11 +89,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         };
       },
     }),
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ...(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET
       ? [
           Google({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            clientId: GOOGLE_CLIENT_ID,
+            clientSecret: GOOGLE_CLIENT_SECRET,
           }),
         ]
       : []),

@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { registerCustomerSchema } from "@/lib/schemas/shop";
-import {
-  isTurnstileConfigured,
-  verifyTurnstileToken,
-} from "@/lib/turnstile";
+import { checkTurnstile } from "@/lib/turnstile";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,14 +18,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (isTurnstileConfigured()) {
-      const ok = await verifyTurnstileToken(parsed.data.turnstileToken);
-      if (!ok) {
-        return NextResponse.json(
-          { success: false, error: "Verifikasi captcha gagal" },
-          { status: 400 },
-        );
-      }
+    const captcha = await checkTurnstile(parsed.data.turnstileToken);
+    if (!captcha.ok) {
+      return NextResponse.json(
+        { success: false, error: captcha.error },
+        { status: 400 },
+      );
     }
 
     const existing = await prisma.customer.findUnique({

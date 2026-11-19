@@ -3,9 +3,10 @@ import type {
   IMidtransNotification,
   ISnapTransactionResponse,
 } from "@/types/shop";
+import { getServerEnv } from "@/lib/env";
 
 function isProduction(): boolean {
-  return process.env.MIDTRANS_IS_PRODUCTION === "true";
+  return getServerEnv().MIDTRANS_IS_PRODUCTION;
 }
 
 function snapBaseUrl(): string {
@@ -15,7 +16,7 @@ function snapBaseUrl(): string {
 }
 
 function getServerKey(): string {
-  const key = process.env.MIDTRANS_SERVER_KEY?.trim();
+  const key = getServerEnv().MIDTRANS_SERVER_KEY;
   if (!key) {
     throw new Error("MIDTRANS_SERVER_KEY tidak diatur");
   }
