@@ -52,6 +52,7 @@ lib/
   midtrans.ts          # Snap transaction, verifikasi signature, mapping status
   shipping.ts, orderNumber.ts, email.ts, turnstile.ts, cloudinary.ts
   schemas/shop.ts      # zod schema input (checkout, cart, order transition, dll)
+  data/content.ts      # getter konten publik ber-cache (tag) + revalidateContent untuk route admin
   constants.ts         # konten fallback statis + SEO
   schema.ts            # JSON-LD structured data
 types/                 # shop.ts (DTO/view model), settings.ts, next-auth.d.ts

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { z } from "zod";
 
 const settingsSchema = z.object({
@@ -72,6 +73,8 @@ export async function PUT(request: Request) {
         data: validatedData,
       });
     }
+
+    revalidateContent(CONTENT_TAGS.settings);
 
     return NextResponse.json(settings);
   } catch (error) {

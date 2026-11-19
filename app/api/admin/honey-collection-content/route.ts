@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 
 // GET - Retrieve honey collection content (title & description)
 export async function GET(request: NextRequest) {
@@ -81,6 +82,8 @@ export async function PUT(request: NextRequest) {
         },
       });
     }
+
+    revalidateContent(CONTENT_TAGS.collection);
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { z } from "zod";
 
 const heroContentSchema = z.object({
@@ -114,6 +115,8 @@ export async function PUT(request: NextRequest) {
       }
       return Array.isArray(data) ? data : [];
     };
+
+    revalidateContent(CONTENT_TAGS.hero);
 
     return NextResponse.json({
       success: true,

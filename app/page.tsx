@@ -11,12 +11,38 @@ import { ArticlesSection } from "@/components/ArticlesSection";
 import { CTASection } from "@/components/CTASection";
 import { Footer } from "@/components/Footer";
 import {
+  getAboutContent,
+  getArticlesSectionContent,
+  getCollectionContent,
+  getHeroContent,
+  getPartnershipContent,
+  getSiteSettings,
+  getTestimonialContent,
+  getWhyChooseContent,
+} from "@/lib/data/content";
+import {
   generateOrganizationSchema,
   generateWebsiteSchema,
   generateLocalBusinessSchema,
 } from "@/lib/schema";
 
-export default function Home() {
+// Konten di-cache per tag dan di-invalidate saat admin menyimpan; revalidate berkala
+// sebagai jaring pengaman bila render terakhir memakai konten fallback (mis. DB sempat down).
+export const revalidate = 3600;
+
+export default async function Home() {
+  const [settings, hero, about, whyChoose, collection, partnership, testimonial, articles] =
+    await Promise.all([
+      getSiteSettings(),
+      getHeroContent(),
+      getAboutContent(),
+      getWhyChooseContent(),
+      getCollectionContent(),
+      getPartnershipContent(),
+      getTestimonialContent(),
+      getArticlesSectionContent(),
+    ]);
+
   // Structured data for SEO
   const organizationSchema = generateOrganizationSchema();
   const websiteSchema = generateWebsiteSchema();
@@ -44,15 +70,15 @@ export default function Home() {
       <HomeHashScroll />
       <Header />
       <main>
-        <HeroSection />
-        <AboutSection />
+        <HeroSection content={hero} settings={settings} />
+        <AboutSection content={about} />
         {/* <ProductLinesSection /> */}
-        <WhyChooseSection />
-        <CollectionSection />
-        <PartnershipSection />
-        <TestimonialsSection />
-        <ArticlesSection />
-        <CTASection />
+        <WhyChooseSection content={whyChoose} />
+        <CollectionSection content={collection} settings={settings} />
+        <PartnershipSection content={partnership} />
+        <TestimonialsSection content={testimonial} />
+        <ArticlesSection content={articles} />
+        <CTASection settings={settings} />
       </main>
       <Footer />
     </div>

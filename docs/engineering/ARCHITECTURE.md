@@ -73,6 +73,7 @@ flowchart TB
         EML["email.ts"]
         GRD["api/guards.ts · auth.ts"]
         SCH["schemas/shop.ts (zod)"]
+        DAT["data/content.ts<br/>konten publik ber-cache (tag)"]
     end
 
     subgraph Data["Data"]
@@ -85,12 +86,18 @@ flowchart TB
     PUB & CUS & ADMAPI & PAY & CRON --> Domain
     Domain --> PR --> PG
     ADMAPI --> GRD
+    ADMAPI -- "revalidateContent()" --> DAT
     CUS --> GRD
 ```
 
 **Aturan dependensi**: `app/` → `lib/` → `lib/prisma.ts`. `components/` tidak mengimpor
 `lib/prisma` (komponen client tidak boleh menyentuh DB). Komponen `components/ui/` tidak berisi
 logika bisnis.
+
+**Konten publik** (homepage, header, footer) dibaca di Server Component lewat getter
+`lib/data/content.ts` (`unstable_cache` per tag + React `cache`, fallback ke `lib/constants.ts`),
+lalu diteruskan sebagai props ke komponen animasi client. Route admin yang mengubah konten wajib
+memanggil `revalidateContent(CONTENT_TAGS.<x>)`; homepage juga revalidate tiap 1 jam.
 
 ## 3. Model data
 

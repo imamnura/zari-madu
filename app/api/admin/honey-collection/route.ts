@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 
 /** Section row used to group products; same defaults as honey-collection-content GET. */
 async function getOrCreateHoneyCollectionContentId(): Promise<string> {
@@ -99,6 +100,8 @@ export async function POST(request: NextRequest) {
         weightGrams: typeof weightGrams === "number" ? weightGrams : null,
       },
     });
+
+    revalidateContent(CONTENT_TAGS.collection);
 
     return NextResponse.json({
       success: true,
@@ -201,6 +204,8 @@ export async function PUT(request: NextRequest) {
       },
     });
 
+    revalidateContent(CONTENT_TAGS.collection);
+
     return NextResponse.json({
       success: true,
       data: collection,
@@ -245,6 +250,8 @@ export async function DELETE(request: NextRequest) {
     await prisma.premiumHoneyCollection.delete({
       where: { id },
     });
+
+    revalidateContent(CONTENT_TAGS.collection);
 
     return NextResponse.json({
       success: true,

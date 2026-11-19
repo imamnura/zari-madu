@@ -26,7 +26,11 @@ vi.mock("@/lib/prisma", () => ({
   ),
 }));
 vi.mock("@/lib/cloudinary", () => ({ uploadToCloudinary: vi.fn() }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  unstable_cache: (fn: unknown) => fn,
+}));
 
 import * as about from "./about-content/route";
 import * as articles from "./articles-content/route";

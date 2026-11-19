@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { getAdminSession } from "@/lib/api/guards";
 import { z } from "zod";
 
@@ -116,8 +117,8 @@ export async function PUT(request: Request) {
         : content.articles;
 
     // Revalidate homepage and articles pages
+    revalidateContent(CONTENT_TAGS.articles);
     const { revalidatePath } = await import("next/cache");
-    revalidatePath("/", "layout"); // Revalidate homepage
     revalidatePath("/articles", "page"); // Revalidate articles list
 
     // Revalidate all article detail pages

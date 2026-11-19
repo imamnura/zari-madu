@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
 
 const criterionSchema = z.object({
   icon: z.string().min(1, "Icon harus diisi"),
@@ -140,7 +140,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Revalidate homepage to reflect changes
-    revalidatePath("/");
+    revalidateContent(CONTENT_TAGS.whyChoose);
 
     return NextResponse.json({
       message: "Data berhasil disimpan",

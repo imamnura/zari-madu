@@ -1,42 +1,9 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import { MessageCircle, Mail } from "lucide-react";
 import { InstagramIcon as Instagram } from "@/components/icons/InstagramIcon";
-import { CONTACT_INFO } from "@/lib/constants";
+import { getSiteSettings } from "@/lib/data/content";
 
-interface Settings {
-  whatsapp: string;
-  instagram: string;
-  email: string;
-  shopeeLink: string;
-  mapsLocation: string;
-  mapsEmbed: string;
-}
-
-type ContactSettings = Settings | typeof CONTACT_INFO;
-
-export function Footer() {
-  const [settings, setSettings] = useState<Settings | null>(null);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch("/api/admin/settings");
-        if (res.ok) {
-          const data = await res.json();
-          setSettings(data);
-        }
-      } catch (error) {
-        console.error("Error fetching settings:", error);
-      }
-    };
-
-    fetchSettings();
-  }, []);
-
-  // Use settings from API or fallback to constants
-  const contactInfo: ContactSettings = settings || CONTACT_INFO;
+export async function Footer() {
+  const contactInfo = await getSiteSettings();
 
   return (
     <footer className="bg-gray-900 text-white py-12 lg:py-16">

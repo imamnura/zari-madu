@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef, useMemo, useState, useEffect } from "react";
+import { useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { CTA_SECTION } from "@/lib/constants";
 import { openWhatsApp } from "@/lib/whatsapp";
@@ -11,40 +11,11 @@ import {
   trackShopeeClick,
 } from "@/components/GoogleAnalytics";
 import { MessageCircle, Sparkles, ShoppingBag } from "lucide-react";
+import type { ISiteSettings } from "@/types/content";
 
-interface Settings {
-  whatsapp: string;
-  instagram: string;
-  email: string;
-  shopeeLink: string;
-  mapsLocation: string;
-  mapsEmbed: string;
-  whatsappOrderMessage?: string;
-  whatsappResellerMessage?: string;
-}
-
-type ContactSettings = Settings;
-
-export function CTASection() {
+export function CTASection({ settings }: { settings: ISiteSettings }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
-  const [settings, setSettings] = useState<Settings | null>(null);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch("/api/admin/settings");
-        if (res.ok) {
-          const data = await res.json();
-          setSettings(data);
-        }
-      } catch (error) {
-        console.error("Error fetching settings:", error);
-      }
-    };
-
-    fetchSettings();
-  }, []);
 
   const particles = useMemo(
     () =>
@@ -58,30 +29,24 @@ export function CTASection() {
   );
 
   const handleOrderClick = () => {
-    if (settings) {
-      const message =
-        settings.whatsappOrderMessage ||
-        "Halo Zari, saya tertarik memesan madu premium. Mohon info detail & harganya.";
-      trackWhatsAppClick("order");
-      openWhatsApp(settings.whatsapp, message);
-    }
+    const message =
+      settings.whatsappOrderMessage ||
+      "Halo Zari, saya tertarik memesan madu premium. Mohon info detail & harganya.";
+    trackWhatsAppClick("order");
+    openWhatsApp(settings.whatsapp, message);
   };
 
   const handleResellerClick = () => {
-    if (settings) {
-      const message =
-        settings.whatsappResellerMessage ||
-        "Halo Zari, saya tertarik menjadi reseller premium. Mohon informasi lebih lanjut.";
-      trackWhatsAppClick("reseller");
-      openWhatsApp(settings.whatsapp, message);
-    }
+    const message =
+      settings.whatsappResellerMessage ||
+      "Halo Zari, saya tertarik menjadi reseller premium. Mohon informasi lebih lanjut.";
+    trackWhatsAppClick("reseller");
+    openWhatsApp(settings.whatsapp, message);
   };
 
   const handleShopeeClick = () => {
-    if (settings) {
-      trackShopeeClick();
-      window.open(settings.shopeeLink, "_blank");
-    }
+    trackShopeeClick();
+    window.open(settings.shopeeLink, "_blank");
   };
 
   return (

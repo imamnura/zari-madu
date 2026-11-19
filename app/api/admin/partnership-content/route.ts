@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
 
 const partnershipSchema = z.object({
   id: z.number(),
@@ -142,7 +142,7 @@ export async function PUT(req: NextRequest) {
       });
     }
 
-    revalidatePath("/");
+    revalidateContent(CONTENT_TAGS.partnership);
 
     return NextResponse.json({
       message: "Data berhasil disimpan",
