@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { ICartView, IGuestCartEntry } from "@/types/shop";
 
@@ -127,9 +128,19 @@ export async function mergeGuestCartIntoCustomer({
 }): Promise<IMergeResult> {
   if (guestItems.length === 0) return { mergedItemCount: 0, droppedItems: [] };
 
+  // Satu produk = satu baris CartItem (unik per cart): gabungkan entri guest yang duplikat.
+  const guestQuantities = new Map<string, number>();
+  for (const entry of guestItems) {
+    guestQuantities.set(
+      entry.productId,
+      (guestQuantities.get(entry.productId) ?? 0) + entry.quantity,
+    );
+  }
+  const productIds = [...guestQuantities.keys()];
+
   return prisma.$transaction(async (tx) => {
     const products = await tx.premiumHoneyCollection.findMany({
-      where: { id: { in: guestItems.map((g) => g.productId) } },
+      where: { id: { in: productIds } },
       select: {
         id: true,
         stock: true,
@@ -143,30 +154,36 @@ export async function mergeGuestCartIntoCustomer({
     if (!cart) {
       cart = await tx.cart.create({ data: { customerId } });
     }
+    const cartId = cart.id;
+
+    // Satu query untuk semua item yang sudah ada, bukan findUnique per item.
+    const existingItems = await tx.cartItem.findMany({
+      where: { cartId, productId: { in: productIds } },
+      select: { id: true, productId: true, quantity: true },
+    });
+    const existingMap = new Map(existingItems.map((it) => [it.productId, it]));
 
     const dropped: IMergeResult["droppedItems"] = [];
+    const toCreate: Prisma.CartItemCreateManyInput[] = [];
     let mergedItemCount = 0;
 
-    for (const entry of guestItems) {
-      const product = productMap.get(entry.productId);
+    for (const [productId, guestQuantity] of guestQuantities) {
+      const product = productMap.get(productId);
       if (!product) continue;
 
       if (!product.alwaysAvailable && product.stock <= 0) {
-        dropped.push({ productId: entry.productId, reason: "out_of_stock" });
+        dropped.push({ productId, reason: "out_of_stock" });
         continue;
       }
 
-      const existing = await tx.cartItem.findUnique({
-        where: { cartId_productId: { cartId: cart.id, productId: entry.productId } },
-      });
-
-      const desired = (existing?.quantity ?? 0) + entry.quantity;
+      const existing = existingMap.get(productId);
+      const desired = (existing?.quantity ?? 0) + guestQuantity;
       const capped = product.alwaysAvailable
         ? Math.min(desired, 99)
         : Math.min(desired, product.stock, 99);
 
       if (capped <= 0) {
-        dropped.push({ productId: entry.productId, reason: "out_of_stock" });
+        dropped.push({ productId, reason: "out_of_stock" });
         continue;
       }
 
@@ -176,16 +193,18 @@ export async function mergeGuestCartIntoCustomer({
           data: { quantity: capped, unitPriceNumeric: product.priceNumeric },
         });
       } else {
-        await tx.cartItem.create({
-          data: {
-            cartId: cart.id,
-            productId: entry.productId,
-            quantity: capped,
-            unitPriceNumeric: product.priceNumeric,
-          },
+        toCreate.push({
+          cartId,
+          productId,
+          quantity: capped,
+          unitPriceNumeric: product.priceNumeric,
         });
       }
       mergedItemCount += 1;
+    }
+
+    if (toCreate.length > 0) {
+      await tx.cartItem.createMany({ data: toCreate });
     }
 
     return { mergedItemCount, droppedItems: dropped };

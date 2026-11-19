@@ -222,6 +222,19 @@ describe("cancelOrder", () => {
     });
   });
 
+  it("restores stock in productId order so parallel cancellations cannot deadlock", async () => {
+    orderUpdateManyMock
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 });
+    orderItemFindManyMock.mockResolvedValue([]);
+
+    await cancelOrder("o1", { fromStatuses: ["PENDING"], reason: "expired" });
+
+    expect(orderItemFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { productId: "asc" } }),
+    );
+  });
+
   it("does not restore stock twice when it was already restored", async () => {
     orderUpdateManyMock
       .mockResolvedValueOnce({ count: 1 })

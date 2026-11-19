@@ -135,14 +135,17 @@ flowchart TD
     A["Scheduler POST /api/cron/expire-pending-orders<br/>Authorization: Bearer CRON_SECRET"] --> B{"secret valid?"}
     B -- tidak --> X["401"]
     B -- ya --> C["SELECT order PENDING<br/>createdAt < now - 24 jam"]
-    C --> D{"untuk tiap order"}
+    C --> D{"tiap gelombang 5 order<br/>(paralel, allSettled)"}
     D --> E["cancelOrder(id, PENDING, expired)"]
     E --> F{"UPDATE ... WHERE status = PENDING<br/>count = 1?"}
     F -- ya --> G["kembalikan stok sekali<br/>expired += 1"]
     F -- "tidak (sudah dibayar)" --> H["lewati, order PAID aman"]
     G --> D
     H --> D
-    D -- selesai --> I["200 {expired, scanned}"]
+    E -- error --> J["failed += 1, log<br/>dicoba lagi run berikutnya"]
+    J --> D
+    D -- "selesai, failed = 0" --> I["200 {expired, scanned, failed}"]
+    D -- "selesai, failed > 0" --> K["500 {expired, scanned, failed}"]
 ```
 
 ## 6. Pemrosesan order oleh admin

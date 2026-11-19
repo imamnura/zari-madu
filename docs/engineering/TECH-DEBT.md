@@ -13,7 +13,7 @@
 | Severity | Jumlah | Selesai |
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
-| 🟠 High | 11 | 7 |
+| 🟠 High | 11 | 8 |
 | 🟡 Medium | 12 | 0 |
 | ⚪ Low | 6 | 0 |
 
@@ -39,7 +39,7 @@
 | TD-11 | `force-dynamic` + `revalidate = 0` di `/shop`, `/articles`, `/articles/[slug]`; listing produk dimuat client-side. | `app/shop/page.tsx`, `app/articles/**` | ISR + revalidate on-demand; render listing awal di server. Selesai: `/articles` & `/articles/[slug]` ISR (revalidate 1 jam + tag `content:articles`, `generateStaticParams`); `/shop` render listing di server dari `searchParams` via `lib/data/products.ts` (`<Suspense key>` per filter), tetap dinamis tanpa cache karena menampilkan stok. | M | ✅ Selesai |
 | TD-12 | `DashboardWrapper` polling localStorage setiap 100 ms. | `components/admin/DashboardWrapper.tsx:37` | React context untuk state sidebar. Selesai: hook `useSidebarExpanded` (`useSyncExternalStore` + localStorage) dipegang `DashboardWrapper`, diteruskan ke `AdminSidebar` lewat props — polling dihapus. | S | ✅ Selesai |
 | TD-13 | `LoadingProgress` progress bar palsu 1 detik di homepage. | `components/LoadingProgress.tsx` | Hapus. Selesai: komponen dihapus dari homepage; loading admin koleksi madu memakai spinner yang sama dengan halaman admin lain. | S | ✅ Selesai |
-| TD-14 | Query berurutan / N+1: dashboard-stats (6 query serial), merge cart, cron loop. | beberapa | `Promise.all`, batch query. | S | ⬜ |
+| TD-14 | Query berurutan / N+1: dashboard-stats (6 query serial), merge cart, cron loop. | beberapa | `Promise.all`, batch query. Selesai: dashboard-stats 6 query via `Promise.all`; merge cart 1 `findMany` + 1 `createMany` (entri duplikat digabung); cron membatalkan paralel maks 5 dengan `allSettled` (gagal → 500 + `failed`), restore stok urut `productId` agar tidak deadlock. | S | ✅ Selesai |
 | TD-15 | Webhook PAID setelah order CANCELLED hanya di-log (`PAID_AFTER_CANCEL`), belum ada flag/alert di dashboard. | webhook | Kolom `needsReview` / tabel `PaymentIncident` + badge di admin. | M | ⬜ |
 | TD-16 | `/api/products`: jika `page > totalPages`, metadata bilang page 1 tapi `items` kosong. | `app/api/products/route.ts` | Hitung `safePage` sebelum query. | S | ⬜ |
 | TD-35 | Cron `expire-pending-orders` belum dijadwalkan (tidak ada `vercel.json`/crontab). Order PENDING yang tidak dibayar tidak pernah kedaluwarsa, stoknya tertahan selamanya. Endpoint hanya menerima `POST`, sedangkan Vercel Cron memanggil `GET`. | `app/api/cron/expire-pending-orders/route.ts` | Tambah handler `GET` (logika sama, auth `Bearer CRON_SECRET`), daftarkan jadwal per jam; lihat DEPLOYMENT-PLAN §4. Ditunda sesuai keputusan 2026-11-19. | S | ⬜ |
@@ -87,7 +87,7 @@ gantt
     section Sprint 2 - Performa
     TD-10 data layer server + cache (selesai) :done, s2a, 2026-11-26, 3d
     TD-11 ISR shop dan artikel (selesai) :done, s2b, after s2a, 2d
-    TD-12 TD-13 TD-14 quick wins    :s2c, after s2b, 1d
+    TD-12 TD-13 TD-14 quick wins (selesai) :done, s2c, after s2b, 1d
     section Sprint 3 - Fondasi
     TD-26 CI pipeline               :s3a, 2026-12-03, 1d
     TD-22 TD-23 env dan headers     :s3b, after s3a, 1d

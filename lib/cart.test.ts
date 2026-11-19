@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const findManyMock = vi.fn();
 const cartFindFirstMock = vi.fn();
 const cartCreateMock = vi.fn();
-const cartItemFindUniqueMock = vi.fn();
-const cartItemCreateMock = vi.fn();
+const cartItemFindManyMock = vi.fn();
+const cartItemCreateManyMock = vi.fn();
 const cartItemUpdateMock = vi.fn();
 
 vi.mock("@/lib/prisma", () => ({
@@ -15,8 +15,8 @@ vi.mock("@/lib/prisma", () => ({
           premiumHoneyCollection: { findMany: findManyMock },
           cart: { findFirst: cartFindFirstMock, create: cartCreateMock },
           cartItem: {
-            findUnique: cartItemFindUniqueMock,
-            create: cartItemCreateMock,
+            findMany: cartItemFindManyMock,
+            createMany: cartItemCreateManyMock,
             update: cartItemUpdateMock,
           },
         }),
@@ -39,12 +39,13 @@ beforeEach(() => {
     findManyMock,
     cartFindFirstMock,
     cartCreateMock,
-    cartItemFindUniqueMock,
-    cartItemCreateMock,
+    cartItemFindManyMock,
+    cartItemCreateManyMock,
     cartItemUpdateMock,
   ]) {
     m.mockReset();
   }
+  cartItemFindManyMock.mockResolvedValue([]);
 });
 
 describe("mergeGuestCartIntoCustomer", () => {
@@ -61,8 +62,6 @@ describe("mergeGuestCartIntoCustomer", () => {
       { id: "p1", stock: 0, alwaysAvailable: false, priceNumeric: 100000 },
     ]);
     cartFindFirstMock.mockResolvedValue({ id: "cart_1", customerId: "cus_1" });
-    cartItemFindUniqueMock.mockResolvedValue(null);
-
     const result = await mergeGuestCartIntoCustomer({
       guestItems: [{ productId: "p1", quantity: 2 }],
       customerId: "cus_1",
@@ -73,7 +72,7 @@ describe("mergeGuestCartIntoCustomer", () => {
       productId: "p1",
       reason: "out_of_stock",
     });
-    expect(cartItemCreateMock).not.toHaveBeenCalled();
+    expect(cartItemCreateManyMock).not.toHaveBeenCalled();
   });
 
   it("caps quantity at product stock", async () => {
@@ -81,19 +80,20 @@ describe("mergeGuestCartIntoCustomer", () => {
       { id: "p1", stock: 3, alwaysAvailable: false, priceNumeric: 100000 },
     ]);
     cartFindFirstMock.mockResolvedValue({ id: "cart_1", customerId: "cus_1" });
-    cartItemFindUniqueMock.mockResolvedValue(null);
 
     await mergeGuestCartIntoCustomer({
       guestItems: [{ productId: "p1", quantity: 10 }],
       customerId: "cus_1",
     });
 
-    expect(cartItemCreateMock).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        productId: "p1",
-        quantity: 3,
-        unitPriceNumeric: 100000,
-      }),
+    expect(cartItemCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          productId: "p1",
+          quantity: 3,
+          unitPriceNumeric: 100000,
+        }),
+      ],
     });
   });
 
@@ -102,7 +102,7 @@ describe("mergeGuestCartIntoCustomer", () => {
       { id: "p1", stock: 10, alwaysAvailable: false, priceNumeric: 100000 },
     ]);
     cartFindFirstMock.mockResolvedValue({ id: "cart_1", customerId: "cus_1" });
-    cartItemFindUniqueMock.mockResolvedValue({ id: "ci_1", quantity: 2 });
+    cartItemFindManyMock.mockResolvedValue([{ id: "ci_1", productId: "p1", quantity: 2 }]);
 
     await mergeGuestCartIntoCustomer({
       guestItems: [{ productId: "p1", quantity: 3 }],
@@ -112,6 +112,56 @@ describe("mergeGuestCartIntoCustomer", () => {
     expect(cartItemUpdateMock).toHaveBeenCalledWith({
       where: { id: "ci_1" },
       data: expect.objectContaining({ quantity: 5 }),
+    });
+  });
+
+  it("reads existing cart items in one query and creates new items in one batch", async () => {
+    findManyMock.mockResolvedValue([
+      { id: "p1", stock: 10, alwaysAvailable: false, priceNumeric: 100000 },
+      { id: "p2", stock: 10, alwaysAvailable: false, priceNumeric: 50000 },
+      { id: "p3", stock: 10, alwaysAvailable: true, priceNumeric: 75000 },
+    ]);
+    cartFindFirstMock.mockResolvedValue({ id: "cart_1", customerId: "cus_1" });
+    cartItemFindManyMock.mockResolvedValue([{ id: "ci_1", productId: "p1", quantity: 1 }]);
+
+    const result = await mergeGuestCartIntoCustomer({
+      guestItems: [
+        { productId: "p1", quantity: 1 },
+        { productId: "p2", quantity: 2 },
+        { productId: "p3", quantity: 3 },
+      ],
+      customerId: "cus_1",
+    });
+
+    expect(cartItemFindManyMock).toHaveBeenCalledTimes(1);
+    expect(cartItemFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { cartId: "cart_1", productId: { in: ["p1", "p2", "p3"] } },
+      }),
+    );
+    expect(cartItemUpdateMock).toHaveBeenCalledTimes(1);
+    expect(cartItemCreateManyMock).toHaveBeenCalledTimes(1);
+    expect(cartItemCreateManyMock.mock.calls[0][0].data).toHaveLength(2);
+    expect(result).toEqual({ mergedItemCount: 3, droppedItems: [] });
+  });
+
+  it("merges duplicate guest entries for the same product into one cart row", async () => {
+    findManyMock.mockResolvedValue([
+      { id: "p1", stock: 4, alwaysAvailable: false, priceNumeric: 100000 },
+    ]);
+    cartFindFirstMock.mockResolvedValue({ id: "cart_1", customerId: "cus_1" });
+
+    await mergeGuestCartIntoCustomer({
+      guestItems: [
+        { productId: "p1", quantity: 2 },
+        { productId: "p1", quantity: 3 },
+      ],
+      customerId: "cus_1",
+    });
+
+    // Tanpa penggabungan, createMany akan berisi dua baris dan melanggar unique (cartId, productId).
+    expect(cartItemCreateManyMock).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ productId: "p1", quantity: 4 })],
     });
   });
 });

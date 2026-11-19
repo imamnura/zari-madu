@@ -14,41 +14,35 @@ export async function GET() {
     const countJsonArray = (value: unknown): number =>
       Array.isArray(value) ? value.length : 0;
 
-    // Get article count
-    const articleContentResult = await prisma.articleContent.findFirst({
-      select: { articles: true },
-    });
-    const articleCount = countJsonArray(articleContentResult?.articles);
-
-    // Get honey collection count
-    const honeyCollectionCount = await prisma.premiumHoneyCollection.count();
-
-    // Get testimonial count
-    const testimonialContentResult = await prisma.testimonialContent.findFirst({
-      select: { testimonials: true },
-    });
-    const testimonialCount = countJsonArray(testimonialContentResult?.testimonials);
-
-    // Get partnership count
-    const partnershipContentResult = await prisma.partnershipContent.findFirst({
-      select: { partnerships: true },
-    });
-    const partnershipCount = countJsonArray(partnershipContentResult?.partnerships);
-
-    // Pesanan baru (status PENDING)
-    const pendingOrderCount = await prisma.order.count({
-      where: { status: "PENDING" },
-    });
-
-    // Pendapatan bulan ini (status PAID / SHIPPED / DELIVERED, paidAt di bulan berjalan WIB)
+    // Query saling independen: jalankan paralel, bukan 6 round-trip berurutan.
     const month = jakartaMonthRange();
-    const revenueAggregate = await prisma.order.aggregate({
-      _sum: { total: true },
-      where: {
-        status: { in: ["PAID", "SHIPPED", "DELIVERED"] },
-        paidAt: { gte: month.start, lt: month.end },
-      },
-    });
+    const [
+      articleContentResult,
+      honeyCollectionCount,
+      testimonialContentResult,
+      partnershipContentResult,
+      pendingOrderCount,
+      revenueAggregate,
+    ] = await Promise.all([
+      prisma.articleContent.findFirst({ select: { articles: true } }),
+      prisma.premiumHoneyCollection.count(),
+      prisma.testimonialContent.findFirst({ select: { testimonials: true } }),
+      prisma.partnershipContent.findFirst({ select: { partnerships: true } }),
+      // Pesanan baru (status PENDING)
+      prisma.order.count({ where: { status: "PENDING" } }),
+      // Pendapatan bulan ini (status PAID / SHIPPED / DELIVERED, paidAt di bulan berjalan WIB)
+      prisma.order.aggregate({
+        _sum: { total: true },
+        where: {
+          status: { in: ["PAID", "SHIPPED", "DELIVERED"] },
+          paidAt: { gte: month.start, lt: month.end },
+        },
+      }),
+    ]);
+
+    const articleCount = countJsonArray(articleContentResult?.articles);
+    const testimonialCount = countJsonArray(testimonialContentResult?.testimonials);
+    const partnershipCount = countJsonArray(partnershipContentResult?.partnerships);
     const monthlyRevenue = revenueAggregate._sum.total ?? 0;
 
     return NextResponse.json({

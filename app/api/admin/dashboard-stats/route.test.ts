@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const { authMock, aggregateMock, orderCountMock } = vi.hoisted(() => ({
+const { authMock, aggregateMock, orderCountMock, articleFindFirstMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   aggregateMock: vi.fn(),
   orderCountMock: vi.fn(),
+  articleFindFirstMock: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({ auth: authMock }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    articleContent: { findFirst: vi.fn().mockResolvedValue({ articles: [{}, {}] }) },
+    articleContent: { findFirst: articleFindFirstMock },
     premiumHoneyCollection: { count: vi.fn().mockResolvedValue(3) },
     testimonialContent: { findFirst: vi.fn().mockResolvedValue(null) },
     partnershipContent: { findFirst: vi.fn().mockResolvedValue({ partnerships: [{}] }) },
@@ -23,6 +24,7 @@ beforeEach(() => {
   authMock.mockReset();
   aggregateMock.mockReset().mockResolvedValue({ _sum: { total: 250000 } });
   orderCountMock.mockReset().mockResolvedValue(4);
+  articleFindFirstMock.mockReset().mockResolvedValue({ articles: [{}, {}] });
 });
 
 afterEach(() => {
@@ -51,5 +53,26 @@ describe("GET /api/admin/dashboard-stats", () => {
     const { paidAt } = aggregateMock.mock.calls[0][0].where;
     expect(paidAt.gte.toISOString()).toBe("2026-11-30T17:00:00.000Z");
     expect(paidAt.lt.toISOString()).toBe("2026-12-31T17:00:00.000Z");
+  });
+
+  it("runs the stats queries in parallel instead of one after another", async () => {
+    authMock.mockResolvedValue({ user: { role: "admin" } });
+    let releaseArticles: (value: unknown) => void = () => {};
+    articleFindFirstMock.mockReturnValue(
+      new Promise((resolve) => {
+        releaseArticles = resolve;
+      }),
+    );
+
+    const pending = GET();
+    await vi.waitFor(() => expect(articleFindFirstMock).toHaveBeenCalled());
+
+    // Query terakhir sudah jalan walau query pertama belum selesai.
+    expect(orderCountMock).toHaveBeenCalled();
+    expect(aggregateMock).toHaveBeenCalled();
+
+    releaseArticles({ articles: [{}] });
+    const body = await (await pending).json();
+    expect(body.data.articleCount).toBe(1);
   });
 });

@@ -181,8 +181,11 @@ async function restoreCancelledOrderStock(
   });
   if (count === 0) return;
 
+  // Urut productId: pembatalan paralel (cron) mengunci baris produk dengan urutan sama,
+  // sehingga tidak saling deadlock.
   const items = await tx.orderItem.findMany({
     where: { orderId, productId: { not: null } },
+    orderBy: { productId: "asc" },
     select: {
       productId: true,
       quantity: true,
