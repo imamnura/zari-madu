@@ -12,7 +12,7 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/orders", () => ({ cancelOrder }));
 vi.mock("@/lib/rate-limit", () => ({ cleanupExpiredRateLimits: vi.fn().mockResolvedValue(3) }));
 
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const ORIGINAL_SECRET = process.env.CRON_SECRET;
 
@@ -26,12 +26,55 @@ afterEach(() => {
   process.env.CRON_SECRET = ORIGINAL_SECRET;
 });
 
-function makeReq(secret?: string) {
+function makeReq(secret?: string, method = "POST") {
   return new NextRequest("http://localhost/api/cron/expire-pending-orders", {
-    method: "POST",
+    method,
     headers: secret ? { authorization: `Bearer ${secret}` } : {},
   });
 }
+
+// Vercel Cron memanggil path dengan GET + `Authorization: Bearer $CRON_SECRET`.
+describe("GET /api/cron/expire-pending-orders (Vercel Cron)", () => {
+  it("returns 401 without the secret", async () => {
+    const res = await GET(makeReq(undefined, "GET"));
+    expect(res.status).toBe(401);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when CRON_SECRET is not configured", async () => {
+    delete process.env.CRON_SECRET;
+    const res = await GET(makeReq("", "GET"));
+    expect(res.status).toBe(401);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it("cancels stale PENDING orders like POST", async () => {
+    findMany.mockResolvedValue([{ id: "o1" }]);
+    cancelOrder.mockResolvedValue(true);
+    const res = await GET(makeReq("super-secret", "GET"));
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.data).toEqual({ expired: 1, scanned: 1, failed: 0, rateLimitsCleared: 3 });
+    expect(cancelOrder).toHaveBeenCalledWith("o1", {
+      fromStatuses: ["PENDING"],
+      reason: "expired",
+    });
+  });
+
+  it("logs failures with the GET tag", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    findMany.mockResolvedValue([{ id: "o1" }]);
+    cancelOrder.mockRejectedValueOnce(new Error("deadlock detected"));
+    const res = await GET(makeReq("super-secret", "GET"));
+    expect(res.status).toBe(500);
+    expect(consoleError).toHaveBeenCalledWith(
+      "[/api/cron/expire-pending-orders GET] gagal membatalkan",
+      "o1",
+      expect.any(Error),
+    );
+    consoleError.mockRestore();
+  });
+});
 
 describe("POST /api/cron/expire-pending-orders", () => {
   it("returns 401 with wrong secret", async () => {

@@ -133,19 +133,23 @@ fetch ke domain lain), tambahkan origin-nya di sana — kalau tidak, browser mem
 - [ ] Staging: bayar order sandbox setelah order dibatalkan admin → insiden muncul, lalu tandai
       selesai → peringatan hilang.
 
-## 4. Konfigurasi cron (prasyarat)
+## 4. Konfigurasi cron (sejak TD-35)
 
-Endpoint `POST /api/cron/expire-pending-orders` belum terjadwal di repo (tidak ada `vercel.json`).
-Dicatat sebagai **TD-35** dan ditunda; selama belum dijadwalkan, order PENDING tidak pernah
-kedaluwarsa otomatis (bisa dipicu manual dengan `curl` di bawah).
+`/api/cron/expire-pending-orders` membatalkan order PENDING > 24 jam (stok dikembalikan) dan
+membersihkan counter rate limit kedaluwarsa. Endpoint menerima `GET` (Vercel Cron) dan `POST`
+(crontab / pemicu manual) dengan logika yang sama; keduanya wajib `Authorization: Bearer $CRON_SECRET`.
+Tanpa `CRON_SECRET`, endpoint selalu 401 dan order tidak pernah kedaluwarsa.
 
-**Vercel** — Vercel Cron memanggil dengan `GET`, sedangkan endpoint hanya menerima `POST`. Pilihan:
-tambahkan handler `GET` yang memanggil logika yang sama (Vercel mengirim header
-`Authorization: Bearer $CRON_SECRET`), lalu:
+**Vercel** — jadwal sudah ada di `vercel.json` (per jam, `0 * * * *`, UTC). Vercel otomatis
+mengirim header `Authorization: Bearer $CRON_SECRET` bila env `CRON_SECRET` diset di project.
 
-```json
-{ "crons": [{ "path": "/api/cron/expire-pending-orders", "schedule": "0 * * * *" }] }
-```
+- [ ] Set `CRON_SECRET` (string acak ≥ 16 karakter) di environment **Production**.
+- [ ] Plan Vercel **Pro** diperlukan untuk jadwal per jam — Hobby hanya mengizinkan cron harian dan
+      deploy akan gagal dengan ekspresi per jam. Bila tetap di Hobby, ubah jadwal ke `0 17 * * *`
+      (00:00 WIB); order bisa tertahan hingga ± 48 jam.
+- [ ] Setelah deploy: **Settings → Cron Jobs** menampilkan jadwal; klik **Run** sekali dan cek log
+      tidak memuat `[/api/cron/expire-pending-orders GET]` error, respons 200.
+- Cron hanya berjalan di deployment Production (bukan Preview).
 
 **VPS** — crontab:
 

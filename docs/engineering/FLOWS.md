@@ -136,7 +136,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A["Scheduler POST /api/cron/expire-pending-orders<br/>Authorization: Bearer CRON_SECRET"] --> B{"secret valid?"}
+    A["Vercel Cron GET (per jam, vercel.json)<br/>atau crontab/manual POST<br/>/api/cron/expire-pending-orders<br/>Authorization: Bearer CRON_SECRET"] --> B{"secret valid?"}
     B -- tidak --> X["401"]
     B -- ya --> C["SELECT order PENDING<br/>createdAt < now - 24 jam"]
     C --> D{"tiap gelombang 5 order<br/>(paralel, allSettled)"}

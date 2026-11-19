@@ -8,7 +8,17 @@ const PENDING_TTL_HOURS = 24;
 // Pembatalan diproses paralel per gelombang; dibatasi agar tidak menghabiskan pool koneksi DB.
 const CANCEL_CONCURRENCY = 5;
 
-export async function POST(request: NextRequest) {
+/** Vercel Cron (jadwal di `vercel.json`) memanggil dengan GET + `Authorization: Bearer $CRON_SECRET`. */
+export function GET(request: NextRequest) {
+  return expirePendingOrders(request, "[/api/cron/expire-pending-orders GET]");
+}
+
+/** Scheduler lain (crontab VPS) & pemicu manual. */
+export function POST(request: NextRequest) {
+  return expirePendingOrders(request, "[/api/cron/expire-pending-orders POST]");
+}
+
+async function expirePendingOrders(request: NextRequest, logTag: string) {
   try {
     const expectedSecret = getServerEnv().CRON_SECRET;
     const authHeader = request.headers.get("authorization") ?? "";
@@ -46,17 +56,13 @@ export async function POST(request: NextRequest) {
           return;
         }
         failed += 1;
-        console.error(
-          "[/api/cron/expire-pending-orders POST] gagal membatalkan",
-          batch[index].id,
-          result.reason,
-        );
+        console.error(`${logTag} gagal membatalkan`, batch[index].id, result.reason);
       });
     }
 
     // Housekeeping: counter rate limit yang window-nya sudah lewat tidak dibutuhkan lagi.
     const rateLimitsCleared = await cleanupExpiredRateLimits().catch((error) => {
-      console.error("[/api/cron/expire-pending-orders POST] cleanup rate limit", error);
+      console.error(`${logTag} cleanup rate limit`, error);
       return 0;
     });
 
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest) {
       data: { expired, scanned: stale.length, failed, rateLimitsCleared },
     });
   } catch (error) {
-    console.error("[/api/cron/expire-pending-orders POST]", error);
+    console.error(logTag, error);
     return NextResponse.json(
       { success: false, error: "Gagal menjalankan cron" },
       { status: 500 },

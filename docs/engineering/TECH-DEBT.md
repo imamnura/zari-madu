@@ -13,7 +13,7 @@
 | Severity | Jumlah | Selesai |
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
-| 🟠 High | 11 | 10 |
+| 🟠 High | 11 | 11 |
 | 🟡 Medium | 12 | 4 |
 | ⚪ Low | 6 | 0 |
 
@@ -42,7 +42,7 @@
 | TD-14 | Query berurutan / N+1: dashboard-stats (6 query serial), merge cart, cron loop. | beberapa | `Promise.all`, batch query. Selesai: dashboard-stats 6 query via `Promise.all`; merge cart 1 `findMany` + 1 `createMany` (entri duplikat digabung); cron membatalkan paralel maks 5 dengan `allSettled` (gagal → 500 + `failed`), restore stok urut `productId` agar tidak deadlock. | S | ✅ Selesai |
 | TD-15 | Webhook PAID setelah order CANCELLED hanya di-log (`PAID_AFTER_CANCEL`), belum ada flag/alert di dashboard. | webhook | Kolom `needsReview` / tabel `PaymentIncident` + badge di admin. Selesai: tabel `payment_incidents` (migration `20261119130000_add_payment_incidents`, idempoten per transaksi); webhook membaca ulang status sebelum mencatat (menutup race dengan cron); admin: peringatan di dashboard, badge + filter "perlu tinjauan" di daftar pesanan, panel insiden + "Tandai selesai" (catatan wajib, atomik) di detail pesanan. | M | ✅ Selesai |
 | TD-16 | `/api/products`: jika `page > totalPages`, metadata bilang page 1 tapi `items` kosong. | `lib/data/products.ts` (`listProducts`, dipakai `/api/products` & `/shop`) | Hitung `safePage` sebelum query. Selesai: `page` di luar jangkauan di-clamp ke halaman terakhir; count + halaman diminta tetap paralel, `findMany` diulang dengan `safePage` hanya bila `page > totalPages` (dan ada produk), sehingga `pagination.page` selalu cocok dengan `items`. | S | ✅ Selesai |
-| TD-35 | Cron `expire-pending-orders` belum dijadwalkan (tidak ada `vercel.json`/crontab). Order PENDING yang tidak dibayar tidak pernah kedaluwarsa, stoknya tertahan selamanya. Endpoint hanya menerima `POST`, sedangkan Vercel Cron memanggil `GET`. | `app/api/cron/expire-pending-orders/route.ts` | Tambah handler `GET` (logika sama, auth `Bearer CRON_SECRET`), daftarkan jadwal per jam; lihat DEPLOYMENT-PLAN §4. Ditunda sesuai keputusan 2026-11-19. | S | ⬜ |
+| TD-35 | Cron `expire-pending-orders` belum dijadwalkan (tidak ada `vercel.json`/crontab). Order PENDING yang tidak dibayar tidak pernah kedaluwarsa, stoknya tertahan selamanya. Endpoint hanya menerima `POST`, sedangkan Vercel Cron memanggil `GET`. | `app/api/cron/expire-pending-orders/route.ts` | Tambah handler `GET` (logika sama, auth `Bearer CRON_SECRET`), daftarkan jadwal per jam; lihat DEPLOYMENT-PLAN §4. Selesai: `GET` (Vercel Cron) dan `POST` (crontab VPS / manual) memanggil logika yang sama dengan tag log masing-masing; `vercel.json` menjadwalkan `0 * * * *` (per jam, butuh plan Vercel Pro — Hobby hanya mengizinkan cron harian). `CRON_SECRET` wajib diset di Vercel. | S | ✅ Selesai |
 
 ## 🟡 Medium — maintainability & scalability
 
@@ -55,7 +55,7 @@
 | TD-21 | Halaman admin 500–950 baris (`articles/page.tsx` 952). | Pecah ke komponen form + hook data. | M | ⬜ |
 | TD-22 | Tidak ada validasi env terpusat; Turnstile *fail-open* bila belum dikonfigurasi di production. | `lib/env.ts` (zod), fail-closed di production. Selesai: semua env server dibaca lewat `getServerEnv()`; `instrumentation.ts` menolak start bila `DATABASE_URL`/`AUTH_SECRET` hilang dan me-log env fitur yang kosong; `checkTurnstile()` menolak login admin & registrasi di production bila Turnstile belum dikonfigurasi. Lihat DEPLOYMENT-PLAN §3a. | S | ✅ Selesai |
 | TD-23 | Tidak ada security headers (CSP, HSTS, frame-ancestors). | `headers()` di `next.config.ts`. Selesai: `lib/security-headers.ts` — CSP (allowlist Midtrans, Turnstile, GA, Google Maps; `frame-ancestors 'none'`, `object-src 'none'`), HSTS (production), X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy. `script-src` tetap `'unsafe-inline'` karena nonce mematikan ISR. Darurat: `CSP_REPORT_ONLY=true`. | S | ✅ Selesai |
-| TD-24 | Tidak ada rate limit (login, register, track order, retry, checkout); login customer tanpa captcha. | Rate limiter (Upstash/Redis atau tabel DB). Selesai: tabel `rate_limits` (migration `20261119120000_add_rate_limits`) + `lib/rate-limit.ts` (fixed window atomik via `INSERT ... ON CONFLICT`, fail-open bila tabel bermasalah); login admin & customer per IP dan per IP+email, register, lacak pesanan, retry pembayaran, checkout → 429 + `Retry-After`. Login customer kini memakai Turnstile; pesan login lewat kode error (`lib/auth-errors.ts`). Counter kedaluwarsa dibersihkan cron (aktif setelah TD-35). | M | ✅ Selesai |
+| TD-24 | Tidak ada rate limit (login, register, track order, retry, checkout); login customer tanpa captcha. | Rate limiter (Upstash/Redis atau tabel DB). Selesai: tabel `rate_limits` (migration `20261119120000_add_rate_limits`) + `lib/rate-limit.ts` (fixed window atomik via `INSERT ... ON CONFLICT`, fail-open bila tabel bermasalah); login admin & customer per IP dan per IP+email, register, lacak pesanan, retry pembayaran, checkout → 429 + `Retry-After`. Login customer kini memakai Turnstile; pesan login lewat kode error (`lib/auth-errors.ts`). Counter kedaluwarsa dibersihkan cron per jam (TD-35). | M | ✅ Selesai |
 | TD-25 | Role di JWT tidak dicek ulang ke DB; ganti password tidak menginvalidasi sesi lama. | `tokenVersion` di Admin/Customer, cek di callback `jwt`. | M | ⬜ |
 | TD-26 | Tidak ada CI (tsc + lint + test + build). | Pipeline CI. Selesai: GitHub Actions `.github/workflows/ci.yml` (repo di GitHub) — tsc, lint, test, `prisma migrate deploy` ke Postgres kosong, build; jalan di push `master`/`develop-nextjs` dan setiap PR. | S | ✅ Selesai |
 | TD-27 | Tidak ada e2e test alur checkout. | Playwright: browse → cart → checkout (Midtrans sandbox). | M | ⬜ |
@@ -93,7 +93,7 @@ gantt
     TD-22 TD-23 env dan headers (selesai) :done, s3b, after s3a, 1d
     TD-24 rate limit (selesai)      :done, s3c, after s3b, 2d
     TD-15 incident pembayaran (selesai) :done, s3d, after s3c, 2d
-    TD-35 jadwal cron expire        :s3e, after s3d, 1d
+    TD-35 jadwal cron expire (selesai) :done, s3e, after s3d, 1d
     section Sprint 4 - Refactor
     TD-17 normalisasi CMS           :s4a, 2026-12-10, 4d
     TD-19 TD-20 TD-21 produk dan admin :s4b, after s4a, 4d
