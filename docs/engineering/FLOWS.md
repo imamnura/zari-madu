@@ -78,6 +78,7 @@ sequenceDiagram
             CO-->>U: 409 Beberapa produk kehabisan stok
         end
     end
+    ORD->>DB: pg_advisory_xact_lock → MAX orderNumber hari ini (WIB) + 1
     ORD->>DB: INSERT Order (PENDING) + OrderItem snapshot
     ORD->>DB: hapus CartItem, COMMIT
     deactivate ORD

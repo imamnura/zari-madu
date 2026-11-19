@@ -94,7 +94,8 @@ export async function createOrderAndReserveStock(
       }
     }
 
-    const orderNumber = await generateOrderNumber();
+    // Ambil nomor paling akhir: lock penomoran ditahan sampai commit, jadi tahan sesingkat mungkin.
+    const orderNumber = await generateOrderNumber(tx);
     const total = subtotal + input.shippingFee;
 
     const order = await tx.order.create({

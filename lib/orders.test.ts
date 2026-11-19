@@ -33,6 +33,7 @@ vi.mock("@/lib/orderNumber", () => ({
   generateOrderNumber: vi.fn().mockResolvedValue("ZH-20260512-0001"),
 }));
 
+import { generateOrderNumber } from "@/lib/orderNumber";
 import {
   createOrderAndReserveStock,
   cancelOrder,
@@ -125,6 +126,10 @@ describe("createOrderAndReserveStock", () => {
       data: { stock: { decrement: 2 } },
     });
     expect(orderCreateMock).toHaveBeenCalledOnce();
+    // Nomor order harus diambil di transaksi yang sama (lock penomoran ditahan sampai commit).
+    expect(generateOrderNumber).toHaveBeenCalledWith(
+      expect.objectContaining({ order: expect.objectContaining({ create: orderCreateMock }) }),
+    );
     expect(result.orderId).toBe("o1");
     expect(result.orderNumber).toMatch(/^ZH-\d{8}-\d{4}$/);
   });

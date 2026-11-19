@@ -1,39 +1,47 @@
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
-const MAX_RETRIES = 5;
+// Kunci pg_advisory_xact_lock khusus penomoran order (nilai bebas, cukup unik di aplikasi ini).
+const ORDER_NUMBER_LOCK_KEY = 7_420_001;
 
+const jakartaDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Jakarta",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** Prefix `ZH-YYYYMMDD` berdasarkan tanggal Asia/Jakarta, bukan zona waktu server. */
 function todayPrefix(now: Date = new Date()): string {
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  return `ZH-${yyyy}${mm}${dd}`;
+  const parts = jakartaDateFormatter.formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `ZH-${part("year")}${part("month")}${part("day")}`;
 }
 
 function formatNumber(prefix: string, sequence: number): string {
   return `${prefix}-${String(sequence).padStart(4, "0")}`;
 }
 
-export async function generateOrderNumber(now: Date = new Date()): Promise<string> {
+/**
+ * Nomor order berikutnya untuk hari ini (WIB). Wajib dipanggil dengan client transaksi
+ * yang sama dengan `order.create`: advisory lock ditahan sampai commit, sehingga checkout
+ * paralel mengantre dan selalu melihat nomor terakhir yang sudah ter-commit.
+ */
+export async function generateOrderNumber(
+  tx: Prisma.TransactionClient,
+  now: Date = new Date(),
+): Promise<string> {
   const prefix = todayPrefix(now);
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(startOfDay);
-  endOfDay.setDate(endOfDay.getDate() + 1);
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ORDER_NUMBER_LOCK_KEY})`;
 
-  let attempt = 0;
-  while (attempt < MAX_RETRIES) {
-    const countToday = await prisma.order.count({
-      where: { createdAt: { gte: startOfDay, lt: endOfDay } },
-    });
-    const candidate = formatNumber(prefix, countToday + 1 + attempt);
-    const collision = await prisma.order.findUnique({
-      where: { orderNumber: candidate },
-      select: { id: true },
-    });
-    if (!collision) return candidate;
-    attempt += 1;
-  }
-  throw new Error("Gagal menghasilkan nomor pesanan unik setelah beberapa percobaan.");
+  // Urutan string valid karena sequence di-pad 4 digit (≤ 9999 order per hari).
+  const last = await tx.order.findFirst({
+    where: { orderNumber: { startsWith: `${prefix}-` } },
+    orderBy: { orderNumber: "desc" },
+    select: { orderNumber: true },
+  });
+  const lastSequence = last ? Number(last.orderNumber.slice(prefix.length + 1)) : 0;
+  return formatNumber(prefix, (Number.isInteger(lastSequence) ? lastSequence : 0) + 1);
 }
 
 export const __testing = { todayPrefix, formatNumber };
