@@ -134,7 +134,7 @@ zari-madu/
 │   │                                 PartnershipSection, ProductLinesSection, RunningText,
 │   │                                 TestimonialAvatar, TestimonialsSection, Typewriter,
 │   │                                 WhyChooseSection, CTASection, Footer, Header,
-│   │                                 ArticlesSection, HomeHashScroll, LoadingProgress,
+│   │                                 ArticlesSection, HomeHashScroll,
 │   │                                 GoogleAnalytics
 │   ├── SessionProviderWrapper.tsx    Wraps next-auth/react SessionProvider (client)
 │   │

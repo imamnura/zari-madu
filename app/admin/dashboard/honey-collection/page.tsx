@@ -12,7 +12,6 @@ import {
   Settings,
   Eye,
 } from "lucide-react";
-import { LoadingProgress } from "@/components/LoadingProgress";
 import { toast } from "sonner";
 import Link from "next/link";
 import {
@@ -323,7 +322,14 @@ export default function HoneyCollectionPage() {
   };
 
   if (loading) {
-    return <LoadingProgress />;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   const convertToRupiah = (value: number) => {

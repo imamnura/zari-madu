@@ -13,7 +13,7 @@
 | Severity | Jumlah | Selesai |
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
-| 🟠 High | 11 | 6 |
+| 🟠 High | 11 | 7 |
 | 🟡 Medium | 12 | 0 |
 | ⚪ Low | 6 | 0 |
 
@@ -38,7 +38,7 @@
 | TD-10 | Homepage: semua section `"use client"` + ~11 fetch client ke `/api/admin/*`; `/api/admin/settings` di-fetch 5×. Konten tidak terindeks Google, LCP lambat. | `components/*Section.tsx`, `Header.tsx`, `Footer.tsx` | Data layer server `lib/data/*` dengan `unstable_cache`/`"use cache"` + `revalidateTag`; komponen animasi menerima props. Selesai: `lib/data/content.ts` (`unstable_cache` + tag, `revalidateContent()` di semua route admin konten), `Header`/`Footer` jadi Server Component, homepage statis + revalidate 1 jam. | M | ✅ Selesai |
 | TD-11 | `force-dynamic` + `revalidate = 0` di `/shop`, `/articles`, `/articles/[slug]`; listing produk dimuat client-side. | `app/shop/page.tsx`, `app/articles/**` | ISR + revalidate on-demand; render listing awal di server. Selesai: `/articles` & `/articles/[slug]` ISR (revalidate 1 jam + tag `content:articles`, `generateStaticParams`); `/shop` render listing di server dari `searchParams` via `lib/data/products.ts` (`<Suspense key>` per filter), tetap dinamis tanpa cache karena menampilkan stok. | M | ✅ Selesai |
 | TD-12 | `DashboardWrapper` polling localStorage setiap 100 ms. | `components/admin/DashboardWrapper.tsx:37` | React context untuk state sidebar. Selesai: hook `useSidebarExpanded` (`useSyncExternalStore` + localStorage) dipegang `DashboardWrapper`, diteruskan ke `AdminSidebar` lewat props — polling dihapus. | S | ✅ Selesai |
-| TD-13 | `LoadingProgress` progress bar palsu 1 detik di homepage. | `components/LoadingProgress.tsx` | Hapus. | S | ⬜ |
+| TD-13 | `LoadingProgress` progress bar palsu 1 detik di homepage. | `components/LoadingProgress.tsx` | Hapus. Selesai: komponen dihapus dari homepage; loading admin koleksi madu memakai spinner yang sama dengan halaman admin lain. | S | ✅ Selesai |
 | TD-14 | Query berurutan / N+1: dashboard-stats (6 query serial), merge cart, cron loop. | beberapa | `Promise.all`, batch query. | S | ⬜ |
 | TD-15 | Webhook PAID setelah order CANCELLED hanya di-log (`PAID_AFTER_CANCEL`), belum ada flag/alert di dashboard. | webhook | Kolom `needsReview` / tabel `PaymentIncident` + badge di admin. | M | ⬜ |
 | TD-16 | `/api/products`: jika `page > totalPages`, metadata bilang page 1 tapi `items` kosong. | `app/api/products/route.ts` | Hitung `safePage` sebelum query. | S | ⬜ |
