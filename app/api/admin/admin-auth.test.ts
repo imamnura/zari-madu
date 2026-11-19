@@ -26,7 +26,6 @@ vi.mock("@/lib/prisma", () => ({
   ),
 }));
 vi.mock("@/lib/cloudinary", () => ({ uploadToCloudinary: vi.fn() }));
-vi.mock("sharp", () => ({ default: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import * as about from "./about-content/route";
@@ -42,7 +41,6 @@ import * as honeyCollectionContent from "./honey-collection-content/route";
 import * as partnership from "./partnership-content/route";
 import * as settings from "./settings/route";
 import * as testimonial from "./testimonial-content/route";
-import * as upload from "./upload/route";
 import * as whyChoose from "./why-choose-content/route";
 
 type Handler = (req: NextRequest) => Promise<Response>;
@@ -63,7 +61,6 @@ const protectedHandlers: Array<[string, string, Handler]> = [
   ["partnership-content", "PUT", partnership.PUT],
   ["settings", "PUT", settings.PUT as unknown as Handler],
   ["testimonial-content", "PUT", testimonial.PUT],
-  ["upload", "POST", upload.POST],
   ["why-choose-content", "PUT", whyChoose.PUT],
 ];
 

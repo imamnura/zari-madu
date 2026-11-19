@@ -169,11 +169,9 @@ zari-madu/
 
 ### File Upload
 
-- `POST /api/admin/upload` - Upload gambar (protected)
-  - Max size: 1MB
-  - Formats: JPEG, PNG, WebP
-  - Auto-resize: 800x800 (maintain aspect ratio)
-  - Auto-convert: WebP untuk optimize
+- `POST /api/admin/cloudinary-upload` - Upload gambar ke Cloudinary (protected, khusus admin)
+  - Endpoint lama `POST /api/admin/upload` (simpan ke `public/uploads`) sudah dihapus:
+    filesystem serverless read-only (TD-09)
 
 ### Admin Profile
 
@@ -299,11 +297,9 @@ mysql -u root -p -e "SHOW DATABASES;"
 ### Image Upload Error
 
 ```bash
-# Check uploads directory permissions
-chmod 755 public/uploads
-
-# Check disk space
-df -h
+# Upload memakai Cloudinary: pastikan NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+# CLOUDINARY_API_KEY, dan CLOUDINARY_API_SECRET terisi di environment deploy,
+# lalu cek log server untuk pesan "Upload error:"
 ```
 
 ### NextAuth Error
