@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
+import { getAdminSession } from "@/lib/api/guards";
 import { z } from "zod";
 
 const articleSchema = z.object({
@@ -72,7 +73,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -116,12 +117,12 @@ export async function PUT(request: Request) {
         : content.articles;
 
     // Revalidate homepage and articles pages
+    revalidateContent(CONTENT_TAGS.articles);
     const { revalidatePath } = await import("next/cache");
-    revalidatePath("/", "layout"); // Revalidate homepage
     revalidatePath("/articles", "page"); // Revalidate articles list
 
     // Revalidate all article detail pages
-    articles.forEach((article: any) => {
+    articles.forEach((article: { slug: string }) => {
       revalidatePath(`/articles/${article.slug}`, "page");
     });
 

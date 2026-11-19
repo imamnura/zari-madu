@@ -1,41 +1,9 @@
-"use client";
+import { MessageCircle, Mail } from "lucide-react";
+import { InstagramIcon as Instagram } from "@/components/icons/InstagramIcon";
+import { getSiteSettings } from "@/lib/data/content";
 
-import { useState, useEffect } from "react";
-import { Instagram, MessageCircle, Mail } from "lucide-react";
-import { CONTACT_INFO } from "@/lib/constants";
-
-interface Settings {
-  whatsapp: string;
-  instagram: string;
-  email: string;
-  shopeeLink: string;
-  mapsLocation: string;
-  mapsEmbed: string;
-}
-
-type ContactSettings = Settings | typeof CONTACT_INFO;
-
-export function Footer() {
-  const [settings, setSettings] = useState<Settings | null>(null);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch("/api/admin/settings");
-        if (res.ok) {
-          const data = await res.json();
-          setSettings(data);
-        }
-      } catch (error) {
-        console.error("Error fetching settings:", error);
-      }
-    };
-
-    fetchSettings();
-  }, []);
-
-  // Use settings from API or fallback to constants
-  const contactInfo: ContactSettings = settings || CONTACT_INFO;
+export async function Footer() {
+  const contactInfo = await getSiteSettings();
 
   return (
     <footer className="bg-gray-900 text-white py-12 lg:py-16">
@@ -43,7 +11,7 @@ export function Footer() {
         <div className="grid md:grid-cols-2 gap-12 items-start">
           {/* Left: Brand & Contact */}
           <div>
-            <h3 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent mb-8">
+            <h3 className="text-3xl lg:text-4xl font-bold bg-linear-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent mb-8">
               Zari Honey
             </h3>
 

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
 
 const criterionSchema = z.object({
   icon: z.string().min(1, "Icon harus diisi"),
@@ -97,7 +97,7 @@ export async function GET() {
 // PUT - Update why choose content
 export async function PUT(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -140,7 +140,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Revalidate homepage to reflect changes
-    revalidatePath("/");
+    revalidateContent(CONTENT_TAGS.whyChoose);
 
     return NextResponse.json({
       message: "Data berhasil disimpan",

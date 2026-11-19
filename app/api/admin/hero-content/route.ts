@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { z } from "zod";
 
 const heroContentSchema = z.object({
@@ -42,14 +43,14 @@ export async function GET() {
     }
 
     // Parse JSON fields - handle both string and object
-    const parseBadges = (data: any) => {
+    const parseBadges = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
       return Array.isArray(data) ? data : [];
     };
 
-    const parseTypewriterTexts = (data: any) => {
+    const parseTypewriterTexts = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
@@ -75,7 +76,7 @@ export async function GET() {
 // PUT - Update hero content (requires authentication)
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
 
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -101,19 +102,21 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    const parseBadgesForResponse = (data: any) => {
+    const parseBadgesForResponse = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
       return Array.isArray(data) ? data : [];
     };
 
-    const parseTypewriterTextsForResponse = (data: any) => {
+    const parseTypewriterTextsForResponse = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
       return Array.isArray(data) ? data : [];
     };
+
+    revalidateContent(CONTENT_TAGS.hero);
 
     return NextResponse.json({
       success: true,

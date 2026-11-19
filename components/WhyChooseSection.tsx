@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef, useState, useEffect } from "react";
+import { useRef } from "react";
 import {
   ShieldCheck,
   Sparkles,
@@ -15,7 +15,7 @@ import {
   Zap,
   Globe,
 } from "lucide-react";
-import { WHY_CHOOSE_ZARI } from "@/lib/constants";
+import type { IWhyChooseContent } from "@/types/content";
 
 const iconMap = {
   ShieldCheck,
@@ -30,40 +30,9 @@ const iconMap = {
   Globe,
 };
 
-type WhyChooseData = {
-  heading: string;
-  title: string;
-  criteria: Array<{
-    icon: string;
-    title: string;
-    description: string;
-  }>;
-};
-
-export function WhyChooseSection() {
+export function WhyChooseSection({ content }: { content: IWhyChooseContent }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
-  const [content, setContent] = useState<WhyChooseData>({
-    heading: "Mengapa Memilih Zari Honey?",
-    title: "Komitmen kami pada kualitas dan kepuasan Anda",
-    criteria: WHY_CHOOSE_ZARI,
-  });
-
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const res = await fetch("/api/admin/why-choose-content");
-        if (res.ok) {
-          const data = await res.json();
-          setContent(data);
-        }
-      } catch (error) {
-        console.error("Error fetching why choose content:", error);
-      }
-    };
-
-    fetchContent();
-  }, []);
 
   return (
     <section id="why-zari" ref={ref} className="py-20 lg:py-32 bg-white">

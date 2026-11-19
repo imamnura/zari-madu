@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LogIn, Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/ui/password-input";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 const turnstileSiteKey =
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
@@ -36,7 +37,7 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const result = await signIn("credentials", {
+      const result = await signIn("admin-credentials", {
         email,
         password,
         turnstileToken: turnstileToken ?? "",
@@ -44,7 +45,7 @@ export default function AdminLoginPage() {
       });
 
       if (result?.error) {
-        toast.error(result.error);
+        toast.error(authErrorMessage(result.code));
         setTurnstileToken(null);
         turnstileRef.current?.reset();
       } else {

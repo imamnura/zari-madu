@@ -2,74 +2,18 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef, useState, useEffect } from "react";
+import { useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
-import { ARTICLES } from "@/lib/constants";
 import Link from "next/link";
+import type { IArticlesSectionContent } from "@/types/content";
 
-interface Article {
-  id: number;
-  slug: string;
-  title: string;
-  excerpt: string;
-  image: string;
-  category: string;
-  author: string;
-  date: string;
-  readTime: string;
-  content: string;
-  tags: string[];
-}
-
-interface ArticleContent {
-  heading: string;
-  title: string;
-  description: string;
-  articles: Article[];
-}
-
-export function ArticlesSection() {
+export function ArticlesSection({ content }: { content: IArticlesSectionContent }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
-  const [content, setContent] = useState<ArticleContent>({
-    heading: "Artikel & Tips",
-    title: "Edukasi Sehat dengan Madu",
-    description:
-      "Tips, resep, dan informasi bermanfaat seputar madu dan kesehatan",
-    articles: ARTICLES,
-  });
-
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const response = await fetch("/api/admin/articles-content", {
-          cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setContent({
-            heading: data.heading ?? "Artikel & Tips",
-            title: data.title ?? "",
-            description: data.description ?? "",
-            articles: Array.isArray(data.articles) ? data.articles : [],
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching articles content:", error);
-        // Use constants as fallback
-      }
-    };
-
-    fetchContent();
-  }, []);
-
-  const displayArticles = content.articles.slice(0, 4);
+  const displayArticles = content.articles;
 
   return (
     <section

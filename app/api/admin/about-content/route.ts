@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { z } from "zod";
 
 const aboutContentSchema = z.object({
@@ -43,7 +44,7 @@ export async function GET() {
     }
 
     // Parse JSON fields
-    const parseStats = (data: any) => {
+    const parseStats = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
@@ -68,7 +69,7 @@ export async function GET() {
 // PUT - Update about content (requires authentication)
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
 
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -94,12 +95,14 @@ export async function PUT(request: NextRequest) {
       },
     });
 
-    const parseStatsForResponse = (data: any) => {
+    const parseStatsForResponse = (data: unknown) => {
       if (typeof data === "string") {
         return JSON.parse(data);
       }
       return Array.isArray(data) ? data : [];
     };
+
+    revalidateContent(CONTENT_TAGS.about);
 
     return NextResponse.json({
       success: true,

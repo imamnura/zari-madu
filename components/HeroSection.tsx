@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { HERO_CONTENT } from "@/lib/constants";
 import { openWhatsApp } from "@/lib/whatsapp";
 import {
   trackWhatsAppClick,
@@ -12,98 +11,37 @@ import {
 import { RunningText } from "./RunningText";
 import { Typewriter } from "./Typewriter";
 import { Sparkles, ShoppingBag } from "lucide-react";
-import { useState, useEffect } from "react";
 import Image from "next/image";
+import type { IHeroContent, ISiteSettings } from "@/types/content";
 
-interface HeroData {
-  badges: string[];
-  typewriterTexts: string[];
-  description: string;
-  productImage: string | null;
+interface IHeroSectionProps {
+  content: IHeroContent;
+  settings: ISiteSettings;
 }
 
-interface Settings {
-  whatsapp: string;
-  instagram: string;
-  email: string;
-  shopeeLink: string;
-  mapsLocation: string;
-  mapsEmbed: string;
-  whatsappOrderMessage?: string;
-  whatsappResellerMessage?: string;
-}
-
-type ContactSettings = Settings;
-
-export function HeroSection() {
-  const [heroData, setHeroData] = useState<HeroData | null>(null);
-  const [settings, setSettings] = useState<Settings | null>(null);
-
-  useEffect(() => {
-    // Fetch dynamic content from API
-    fetch("/api/admin/hero-content")
-      .then((res) => res.json())
-      .then((data) => setHeroData(data))
-      .catch((error) => {
-        console.error("Error loading hero content:", error);
-      });
-
-    // Fetch settings
-    fetch("/api/admin/settings")
-      .then((res) => res.json())
-      .then((data) => setSettings(data))
-      .catch((error) => {
-        console.error("Error fetching settings:", error);
-        // Fallback to static content if API fails
-        setHeroData({
-          badges: HERO_CONTENT.badges,
-          typewriterTexts: [
-            "Madu Premium Asli dari Alam Indonesia",
-            "Kualitas Terpercaya - Tanpa Aditif",
-          ],
-          description: HERO_CONTENT.subheadline,
-          productImage: null,
-        });
-      });
-  }, []);
-
-  const contactInfo: ContactSettings | null = settings;
-
+export function HeroSection({ content, settings }: IHeroSectionProps) {
   const handleOrderClick = () => {
-    if (contactInfo) {
-      const message =
-        contactInfo.whatsappOrderMessage ||
-        "Halo Zari, saya tertarik memesan madu premium. Mohon info detail & harganya.";
-      trackWhatsAppClick("order");
-      openWhatsApp(contactInfo.whatsapp, message);
-    }
+    const message =
+      settings.whatsappOrderMessage ||
+      "Halo Zari, saya tertarik memesan madu premium. Mohon info detail & harganya.";
+    trackWhatsAppClick("order");
+    openWhatsApp(settings.whatsapp, message);
   };
 
   const handleResellerClick = () => {
-    if (contactInfo) {
-      const message =
-        contactInfo.whatsappResellerMessage ||
-        "Halo Zari, saya tertarik menjadi reseller premium. Mohon informasi lebih lanjut.";
-      trackWhatsAppClick("reseller");
-      openWhatsApp(contactInfo.whatsapp, message);
-    }
+    const message =
+      settings.whatsappResellerMessage ||
+      "Halo Zari, saya tertarik menjadi reseller premium. Mohon informasi lebih lanjut.";
+    trackWhatsAppClick("reseller");
+    openWhatsApp(settings.whatsapp, message);
   };
 
   const handleShopeeClick = () => {
-    if (contactInfo) {
-      trackShopeeClick();
-      window.open(contactInfo.shopeeLink, "_blank");
-    }
+    trackShopeeClick();
+    window.open(settings.shopeeLink, "_blank");
   };
 
-  // Show loading or fallback while data is being fetched
-  const badges = heroData?.badges || HERO_CONTENT.badges;
-  const typewriterTexts = heroData?.typewriterTexts || [
-    "Madu Premium Asli dari Alam Indonesia",
-    "Kualitas Terpercaya - Tanpa Aditif",
-  ];
-  const description = heroData?.description || HERO_CONTENT.subheadline;
-  const productImage = heroData?.productImage;
+  const { badges, typewriterTexts, description, productImage } = content;
 
   return (
     <>

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
 
 const partnershipSchema = z.object({
   id: z.number(),
@@ -102,7 +102,7 @@ export async function GET() {
 // PUT - Update partnership content
 export async function PUT(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -142,7 +142,7 @@ export async function PUT(req: NextRequest) {
       });
     }
 
-    revalidatePath("/");
+    revalidateContent(CONTENT_TAGS.partnership);
 
     return NextResponse.json({
       message: "Data berhasil disimpan",

@@ -2,39 +2,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Calendar, Clock, ArrowLeft, User, ArrowRight } from "lucide-react";
-import { ARTICLES } from "@/lib/constants";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getArticles } from "@/lib/data/content";
+import { sanitizeRichHtml } from "@/lib/sanitize";
 
-// Force dynamic rendering - no caching
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// ISR: artikel yang ada saat build dirender statis; slug baru dirender saat pertama diakses.
+// Di-invalidate saat admin menyimpan artikel (tag content:articles).
+export const revalidate = 3600;
 
-async function getArticles() {
-  try {
-    const content = await prisma.articleContent.findFirst({
-      orderBy: { updatedAt: "desc" },
-    });
-
-    if (!content || !content.articles) {
-      return ARTICLES;
-    }
-
-    const articles =
-      typeof content.articles === "string"
-        ? JSON.parse(content.articles)
-        : content.articles;
-
-    return articles.length > 0 ? articles : ARTICLES;
-  } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("Error fetching articles:", error);
-    }
-    return ARTICLES;
-  }
+export async function generateStaticParams() {
+  const articles = await getArticles();
+  return articles.map((article) => ({ slug: article.slug }));
 }
 
 export default async function ArticleDetailPage({
@@ -44,7 +25,7 @@ export default async function ArticleDetailPage({
 }) {
   const { slug } = await params;
   const articles = await getArticles();
-  const article = articles.find((a: any) => a.slug === slug);
+  const article = articles.find((a) => a.slug === slug);
 
   if (!article) {
     notFound();
@@ -52,7 +33,7 @@ export default async function ArticleDetailPage({
 
   // Get related articles (exclude current article, max 3)
   const relatedArticles = articles
-    .filter((a: any) => a.id !== article.id)
+    .filter((a) => a.id !== article.id)
     .slice(0, 3);
 
   return (
@@ -108,7 +89,7 @@ export default async function ArticleDetailPage({
           </div>
 
           {/* Featured Image */}
-          <div className="w-full aspect-video bg-gradient-to-br from-amber-100 to-amber-200 rounded-2xl overflow-hidden mb-12">
+          <div className="w-full aspect-video bg-linear-to-br from-amber-100 to-amber-200 rounded-2xl overflow-hidden mb-12">
             {article.image ? (
               <img
                 src={article.image}
@@ -128,11 +109,11 @@ export default async function ArticleDetailPage({
           {/* Article Content — typography + daftar/heading (Tailwind preflight menonaktifkan list default) */}
           <div
             className="article-content prose prose-neutral prose-lg max-w-none mb-12 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:my-1 [&_h1]:text-3xl [&_h1]:font-bold [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:text-xl [&_h3]:font-semibold"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(article.content) }}
           />
 
           {/* CTA Box */}
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100 p-8 rounded-2xl border-2 border-amber-300 mb-12">
+          <div className="bg-linear-to-r from-amber-50 to-amber-100 p-8 rounded-2xl border-2 border-amber-300 mb-12">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
               Tertarik Mencoba Madu Premium Kami?
             </h3>
@@ -159,13 +140,13 @@ export default async function ArticleDetailPage({
               Artikel Terkait
             </h2>
             <div className="grid md:grid-cols-3 gap-8">
-              {relatedArticles.map((relatedArticle: any) => (
+              {relatedArticles.map((relatedArticle) => (
                 <Link
                   key={relatedArticle.id}
                   href={`/articles/${relatedArticle.slug}`}
                 >
                   <Card className="h-full hover:shadow-xl transition-all duration-300 group border-2 hover:border-amber-300">
-                    <div className="relative w-full aspect-video bg-gradient-to-br from-amber-100 to-amber-200 overflow-hidden">
+                    <div className="relative w-full aspect-video bg-linear-to-br from-amber-100 to-amber-200 overflow-hidden">
                       <Badge className="absolute top-4 left-4 bg-amber-600 text-white z-10">
                         {relatedArticle.category}
                       </Badge>

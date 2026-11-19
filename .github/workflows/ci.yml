@@ -1,0 +1,73 @@
+# CI: typecheck, lint, test, dan build untuk setiap push/PR ke branch utama (TD-26).
+# Build butuh DB karena homepage & artikel diprerender; dipakai Postgres kosong yang
+# di-migrate dari nol (sekaligus memastikan semua migration bisa di-apply berurutan).
+name: CI
+
+on:
+  push:
+    branches: [master, develop-nextjs]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: tsc · lint · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zari_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Nilai dummy khusus CI — bukan credential. Secret asli tidak dibutuhkan untuk build/test.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/zari_ci?schema=public
+      AUTH_SECRET: ci-only-not-a-real-secret
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Build
+        run: pnpm build

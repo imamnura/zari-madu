@@ -471,7 +471,7 @@ export default function TestimonialsContentPage() {
                             ))}
                           </div>
                           <p className="text-sm text-gray-600 italic">
-                            "{testimonial.text}"
+                            &ldquo;{testimonial.text}&rdquo;
                           </p>
                         </div>
 

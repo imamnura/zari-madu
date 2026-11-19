@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 import { z } from "zod";
 
 const settingsSchema = z.object({
@@ -49,7 +50,7 @@ export async function GET() {
 // PUT - Update settings
 export async function PUT(request: Request) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -72,6 +73,8 @@ export async function PUT(request: Request) {
         data: validatedData,
       });
     }
+
+    revalidateContent(CONTENT_TAGS.settings);
 
     return NextResponse.json(settings);
   } catch (error) {

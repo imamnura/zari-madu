@@ -2,9 +2,9 @@
 
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { useInView } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
-import { ABOUT_CONTENT } from "@/lib/constants";
+import { useRef, useEffect } from "react";
 import { TrendingUp } from "lucide-react";
+import type { IAboutContent } from "@/types/content";
 
 function Counter({ value, isInView }: { value: string; isInView: boolean }) {
   const count = useMotionValue(0);
@@ -26,40 +26,10 @@ function Counter({ value, isInView }: { value: string; isInView: boolean }) {
   return <span>{value}</span>;
 }
 
-interface AboutData {
-  tagline: string;
-  heading: string;
-  body: string;
-  stats: Array<{ value: string; label: string }>;
-}
-
-export function AboutSection() {
+export function AboutSection({ content }: { content: IAboutContent }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
-  const [aboutData, setAboutData] = useState<AboutData | null>(null);
-
-  useEffect(() => {
-    // Fetch dynamic content from API
-    fetch("/api/admin/about-content")
-      .then((res) => res.json())
-      .then((data) => setAboutData(data))
-      .catch((error) => {
-        console.error("Error loading about content:", error);
-        // Fallback to static content if API fails
-        setAboutData({
-          tagline: "Terpercaya & Berkualitas",
-          heading: ABOUT_CONTENT.heading,
-          body: ABOUT_CONTENT.body,
-          stats: ABOUT_CONTENT.stats,
-        });
-      });
-  }, []);
-
-  // Use dynamic data or fallback to static
-  const tagline = aboutData?.tagline || "Terpercaya & Berkualitas";
-  const heading = aboutData?.heading || ABOUT_CONTENT.heading;
-  const body = aboutData?.body || ABOUT_CONTENT.body;
-  const stats = aboutData?.stats || ABOUT_CONTENT.stats;
+  const { tagline, heading, body, stats } = content;
 
   return (
     <section

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api/guards";
 import { prisma } from "@/lib/prisma";
+import { CONTENT_TAGS, revalidateContent } from "@/lib/data/content";
 
 /** Section row used to group products; same defaults as honey-collection-content GET. */
 async function getOrCreateHoneyCollectionContentId(): Promise<string> {
@@ -45,7 +46,7 @@ export async function GET() {
 // POST - Create new premium honey collection
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
 
     if (!session) {
       return NextResponse.json(
@@ -55,7 +56,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, price, image, label, features } = body;
+    const {
+      name,
+      description,
+      price,
+      image,
+      label,
+      features,
+      categoryId,
+      slug,
+      stock,
+      alwaysAvailable,
+      priceNumeric,
+      weightGrams,
+    } = body;
 
     if (!name || !description) {
       return NextResponse.json(
@@ -78,8 +92,16 @@ export async function POST(request: NextRequest) {
         label: label || null,
         features: features ?? null,
         honeyCollectionContentId,
+        categoryId: categoryId || null,
+        slug: slug || null,
+        stock: typeof stock === "number" ? stock : 0,
+        alwaysAvailable: Boolean(alwaysAvailable),
+        priceNumeric: typeof priceNumeric === "number" ? priceNumeric : 0,
+        weightGrams: typeof weightGrams === "number" ? weightGrams : null,
       },
     });
+
+    revalidateContent(CONTENT_TAGS.collection);
 
     return NextResponse.json({
       success: true,
@@ -101,7 +123,7 @@ export async function POST(request: NextRequest) {
 // PUT - Update premium honey collection
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
 
     if (!session) {
       return NextResponse.json(
@@ -111,7 +133,21 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, description, price, image, label, features } = body;
+    const {
+      id,
+      name,
+      description,
+      price,
+      image,
+      label,
+      features,
+      categoryId,
+      slug,
+      stock,
+      alwaysAvailable,
+      priceNumeric,
+      weightGrams,
+    } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -157,8 +193,18 @@ export async function PUT(request: NextRequest) {
         label: label || null,
         features: features ?? null,
         honeyCollectionContentId,
+        ...(categoryId !== undefined ? { categoryId: categoryId || null } : {}),
+        ...(slug !== undefined ? { slug: slug || null } : {}),
+        ...(typeof stock === "number" ? { stock } : {}),
+        ...(typeof alwaysAvailable === "boolean" ? { alwaysAvailable } : {}),
+        ...(typeof priceNumeric === "number" ? { priceNumeric } : {}),
+        ...(weightGrams !== undefined
+          ? { weightGrams: typeof weightGrams === "number" ? weightGrams : null }
+          : {}),
       },
     });
+
+    revalidateContent(CONTENT_TAGS.collection);
 
     return NextResponse.json({
       success: true,
@@ -180,7 +226,7 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete premium honey collection
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession();
     if (!session) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -204,6 +250,8 @@ export async function DELETE(request: NextRequest) {
     await prisma.premiumHoneyCollection.delete({
       where: { id },
     });
+
+    revalidateContent(CONTENT_TAGS.collection);
 
     return NextResponse.json({
       success: true,

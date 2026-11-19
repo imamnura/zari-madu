@@ -300,6 +300,89 @@ async function main() {
   });
 
   console.log("✅ Default settings created");
+
+  await seedShop();
+}
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function parsePriceToNumeric(price: string | null | undefined): number {
+  if (!price) return 0;
+  const digits = price.replace(/[^\d]/g, "");
+  return digits.length > 0 ? parseInt(digits, 10) : 0;
+}
+
+async function seedShop() {
+  const defaultCategory = await prisma.category.upsert({
+    where: { slug: "madu-premium" },
+    update: {},
+    create: {
+      slug: "madu-premium",
+      name: "Madu Premium",
+      description: "Pilihan madu premium pilihan Zari Honey",
+      displayOrder: 0,
+      isActive: true,
+    },
+  });
+  console.log("✅ Default category created:", defaultCategory.name);
+
+  const productsNeedingBackfill = await prisma.premiumHoneyCollection.findMany({
+    where: {
+      OR: [{ slug: null }, { categoryId: null }, { priceNumeric: 0 }],
+    },
+  });
+
+  const usedSlugs = new Set<string>();
+  for (const product of productsNeedingBackfill) {
+    const baseSlug = slugify(product.name) || product.id.slice(0, 8);
+    let candidate = baseSlug;
+    let suffix = 2;
+    while (usedSlugs.has(candidate)) {
+      candidate = `${baseSlug}-${suffix}`;
+      suffix += 1;
+    }
+    usedSlugs.add(candidate);
+
+    const priceNumeric = parsePriceToNumeric(product.price);
+    await prisma.premiumHoneyCollection.update({
+      where: { id: product.id },
+      data: {
+        slug: product.slug ?? candidate,
+        categoryId: product.categoryId ?? defaultCategory.id,
+        priceNumeric: product.priceNumeric === 0 ? priceNumeric : product.priceNumeric,
+      },
+    });
+  }
+  if (productsNeedingBackfill.length > 0) {
+    console.log(
+      `✅ Backfilled ${productsNeedingBackfill.length} existing product(s) with slug/category/priceNumeric`
+    );
+  }
+
+  const shippingRates = [
+    { province: "DKI Jakarta", fee: 15000, estimatedDays: "1-2 hari" },
+    { province: "Jawa Barat", fee: 20000, estimatedDays: "2-3 hari" },
+    { province: "Banten", fee: 18000, estimatedDays: "2-3 hari" },
+    { province: "Jawa Tengah", fee: 25000, estimatedDays: "3-4 hari" },
+    { province: "Jawa Timur", fee: 30000, estimatedDays: "3-5 hari" },
+  ];
+  for (const rate of shippingRates) {
+    await prisma.shippingRate.upsert({
+      where: { province: rate.province },
+      update: {},
+      create: { ...rate, isActive: true },
+    });
+  }
+  console.log(`✅ Seeded ${shippingRates.length} shipping rates`);
 }
 
 main()

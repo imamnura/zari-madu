@@ -15,9 +15,10 @@ import {
   MessageSquare,
   Handshake,
   Droplet,
+  Package,
+  Tag,
+  Truck,
 } from "lucide-react";
-import { useState, useEffect } from "react";
-
 const menuItems = [
   {
     label: "Dashboard",
@@ -38,6 +39,21 @@ const menuItems = [
     label: "Koleksi Madu",
     href: "/admin/dashboard/honey-collection",
     icon: Droplet,
+  },
+  {
+    label: "Pesanan",
+    href: "/admin/dashboard/orders",
+    icon: Package,
+  },
+  {
+    label: "Kategori",
+    href: "/admin/dashboard/categories",
+    icon: Tag,
+  },
+  {
+    label: "Ongkos Kirim",
+    href: "/admin/dashboard/shipping-rates",
+    icon: Truck,
   },
   {
     label: "Why Choose",
@@ -69,26 +85,17 @@ const menuItems = [
 interface AdminSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  isExpanded: boolean;
+  onToggleExpanded: () => void;
 }
 
-export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({
+  isOpen,
+  onClose,
+  isExpanded,
+  onToggleExpanded,
+}: AdminSidebarProps) {
   const pathname = usePathname();
-  const [isExpanded, setIsExpanded] = useState(true);
-
-  // Load expanded state from localStorage
-  useEffect(() => {
-    const savedState = localStorage.getItem("sidebarExpanded");
-    if (savedState !== null) {
-      setIsExpanded(savedState === "true");
-    }
-  }, []);
-
-  // Save expanded state to localStorage
-  const toggleExpanded = () => {
-    const newState = !isExpanded;
-    setIsExpanded(newState);
-    localStorage.setItem("sidebarExpanded", String(newState));
-  };
 
   return (
     <>
@@ -112,11 +119,10 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div
-            className={`flex items-center gap-3 px-6 py-5 border-b border-gray-200 ${
-              !isExpanded && "px-4 justify-center"
-            }`}
+            className={`flex items-center gap-3 px-6 py-5 border-b border-gray-200 ${!isExpanded && "px-4 justify-center"
+              }`}
           >
-            <div className="text-3xl flex-shrink-0">🍯</div>
+            <div className="text-3xl shrink-0">🍯</div>
             {isExpanded && (
               <div className="overflow-hidden">
                 <h1 className="font-bold text-gray-900 whitespace-nowrap">
@@ -155,15 +161,14 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   className={`
                     flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
                     ${!isExpanded && "justify-center"}
-                    ${
-                      isActive
-                        ? "bg-amber-50 text-amber-700 font-medium"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    ${isActive
+                      ? "bg-amber-50 text-amber-700 font-medium"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     }
                   `}
                   title={!isExpanded ? item.label : undefined}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <Icon className="w-5 h-5 shrink-0" />
                   {isExpanded && (
                     <span className="whitespace-nowrap">{item.label}</span>
                   )}
@@ -175,7 +180,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           {/* Toggle Button - Desktop only */}
           <div className="hidden lg:block px-4 py-4 border-t border-gray-200">
             <button
-              onClick={toggleExpanded}
+              onClick={onToggleExpanded}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
               title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
             >
