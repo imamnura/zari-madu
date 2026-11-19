@@ -28,7 +28,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A["MR develop-nextjs → master"] --> B["CI / lokal:<br/>tsc · lint · test · build"]
+    A["PR develop-nextjs → master"] --> B["CI GitHub Actions (.github/workflows/ci.yml):<br/>tsc · lint · test · migrate · build"]
     B -->|gagal| A
     B -->|lulus| C["Code review"]
     C --> D["Deploy ke Preview/Staging<br/>DB staging + Midtrans sandbox"]
@@ -63,7 +63,7 @@ flowchart TD
 - [ ] Notifikasi Midtrans sandbox diarahkan ke URL staging.
 
 ### Deploy
-1. Merge MR ke `master` di luar jam ramai (mis. 22:00–06:00 WIB).
+1. Merge PR ke `master` di luar jam ramai (mis. 22:00–06:00 WIB).
 2. Vercel otomatis build & deploy. VPS: `git pull && pnpm install --frozen-lockfile && pnpm build && pm2 reload zari-madu`.
 3. Tidak perlu `prisma migrate deploy`.
 

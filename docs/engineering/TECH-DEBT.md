@@ -14,7 +14,7 @@
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
 | 🟠 High | 11 | 8 |
-| 🟡 Medium | 12 | 0 |
+| 🟡 Medium | 12 | 1 |
 | ⚪ Low | 6 | 0 |
 
 ## 🔴 Critical — keamanan & integritas data
@@ -46,20 +46,20 @@
 
 ## 🟡 Medium — maintainability & scalability
 
-| ID | Masalah | Perbaikan | Effort |
-|---|---|---|---|
-| TD-17 | Konten CMS (artikel, testimoni, partnership) disimpan sebagai satu array JSON per baris → lost update antar admin, tanpa paginasi, lookup artikel memuat semua. | Tabel `Article`, `Testimonial`, `Partner` + migrasi data. | L |
-| TD-18 | Pola singleton tidak konsisten (`id: "default"` vs `findFirst orderBy updatedAt`); GET ikut membuat baris (write on read). | Seed sekali, GET read-only. | S |
-| TD-19 | Produk: dua sumber harga (`price` String + `priceNumeric`), nama model `PremiumHoneyCollection`, tanpa `isActive`/soft-delete, CRUD tanpa zod. | Konsolidasi harga, zod schema, rename bertahap. | M |
-| TD-20 | Duplikasi: mapper `toOrderView` (webhook & admin inline), helper `JSON.parse` di tiap route konten, guard auth admin lama di categories/orders/shipping-rates. | `lib/mappers/order.ts`, `lib/content.ts`, pakai `getAdminSession` di semua route. | S |
-| TD-21 | Halaman admin 500–950 baris (`articles/page.tsx` 952). | Pecah ke komponen form + hook data. | M |
-| TD-22 | Tidak ada validasi env terpusat; Turnstile *fail-open* bila belum dikonfigurasi di production. | `lib/env.ts` (zod), fail-closed di production. | S |
-| TD-23 | Tidak ada security headers (CSP, HSTS, frame-ancestors). | `headers()` di `next.config.ts`. | S |
-| TD-24 | Tidak ada rate limit (login, register, track order, retry, checkout); login customer tanpa captcha. | Rate limiter (Upstash/Redis atau tabel DB). | M |
-| TD-25 | Role di JWT tidak dicek ulang ke DB; ganti password tidak menginvalidasi sesi lama. | `tokenVersion` di Admin/Customer, cek di callback `jwt`. | M |
-| TD-26 | Tidak ada CI (tsc + lint + test + build). | Pipeline GitLab CI. | S |
-| TD-27 | Tidak ada e2e test alur checkout. | Playwright: browse → cart → checkout (Midtrans sandbox). | M |
-| TD-28 | Tidak ada error monitoring / log terstruktur. | Sentry + logger JSON. | S |
+| ID | Masalah | Perbaikan | Effort | Status |
+|---|---|---|---|---|
+| TD-17 | Konten CMS (artikel, testimoni, partnership) disimpan sebagai satu array JSON per baris → lost update antar admin, tanpa paginasi, lookup artikel memuat semua. | Tabel `Article`, `Testimonial`, `Partner` + migrasi data. | L | ⬜ |
+| TD-18 | Pola singleton tidak konsisten (`id: "default"` vs `findFirst orderBy updatedAt`); GET ikut membuat baris (write on read). | Seed sekali, GET read-only. | S | ⬜ |
+| TD-19 | Produk: dua sumber harga (`price` String + `priceNumeric`), nama model `PremiumHoneyCollection`, tanpa `isActive`/soft-delete, CRUD tanpa zod. | Konsolidasi harga, zod schema, rename bertahap. | M | ⬜ |
+| TD-20 | Duplikasi: mapper `toOrderView` (webhook & admin inline), helper `JSON.parse` di tiap route konten, guard auth admin lama di categories/orders/shipping-rates. | `lib/mappers/order.ts`, `lib/content.ts`, pakai `getAdminSession` di semua route. | S | ⬜ |
+| TD-21 | Halaman admin 500–950 baris (`articles/page.tsx` 952). | Pecah ke komponen form + hook data. | M | ⬜ |
+| TD-22 | Tidak ada validasi env terpusat; Turnstile *fail-open* bila belum dikonfigurasi di production. | `lib/env.ts` (zod), fail-closed di production. | S | ⬜ |
+| TD-23 | Tidak ada security headers (CSP, HSTS, frame-ancestors). | `headers()` di `next.config.ts`. | S | ⬜ |
+| TD-24 | Tidak ada rate limit (login, register, track order, retry, checkout); login customer tanpa captcha. | Rate limiter (Upstash/Redis atau tabel DB). | M | ⬜ |
+| TD-25 | Role di JWT tidak dicek ulang ke DB; ganti password tidak menginvalidasi sesi lama. | `tokenVersion` di Admin/Customer, cek di callback `jwt`. | M | ⬜ |
+| TD-26 | Tidak ada CI (tsc + lint + test + build). | Pipeline CI. Selesai: GitHub Actions `.github/workflows/ci.yml` (repo di GitHub) — tsc, lint, test, `prisma migrate deploy` ke Postgres kosong, build; jalan di push `master`/`develop-nextjs` dan setiap PR. | S | ✅ Selesai |
+| TD-27 | Tidak ada e2e test alur checkout. | Playwright: browse → cart → checkout (Midtrans sandbox). | M | ⬜ |
+| TD-28 | Tidak ada error monitoring / log terstruktur. | Sentry + logger JSON. | S | ⬜ |
 
 ## ⚪ Low — kebersihan repo
 
@@ -89,7 +89,7 @@ gantt
     TD-11 ISR shop dan artikel (selesai) :done, s2b, after s2a, 2d
     TD-12 TD-13 TD-14 quick wins (selesai) :done, s2c, after s2b, 1d
     section Sprint 3 - Fondasi
-    TD-26 CI pipeline               :s3a, 2026-12-03, 1d
+    TD-26 CI pipeline (selesai)     :done, s3a, 2026-12-03, 1d
     TD-22 TD-23 env dan headers     :s3b, after s3a, 1d
     TD-24 rate limit                :s3c, after s3b, 2d
     TD-15 incident pembayaran       :s3d, after s3c, 2d
