@@ -113,6 +113,30 @@ describe("listProducts", () => {
     });
   });
 
+  it("clamps page beyond totalPages to the last page and returns its items", async () => {
+    countMock.mockResolvedValue(13);
+    findManyMock.mockImplementation(async (args: { skip: number }) =>
+      args.skip >= 13 ? [] : [row],
+    );
+
+    const result = await listProducts(parseProductQuery(new URLSearchParams("page=5")));
+
+    expect(result.pagination).toEqual({ page: 2, pageSize: 12, totalItems: 13, totalPages: 2 });
+    expect(result.items).toHaveLength(1);
+    expect(findManyMock.mock.lastCall?.[0].skip).toBe(12);
+  });
+
+  it("does not refetch when there are no products at all", async () => {
+    countMock.mockResolvedValue(0);
+    findManyMock.mockResolvedValue([]);
+
+    const result = await listProducts(parseProductQuery(new URLSearchParams("page=3")));
+
+    expect(result.pagination).toEqual({ page: 1, pageSize: 12, totalItems: 0, totalPages: 1 });
+    expect(result.items).toEqual([]);
+    expect(findManyMock).toHaveBeenCalledTimes(1);
+  });
+
   it("uses the product id as slug when slug is missing", async () => {
     countMock.mockResolvedValue(1);
     findManyMock.mockResolvedValue([{ ...row, slug: null, category: null }]);

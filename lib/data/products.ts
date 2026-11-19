@@ -123,19 +123,26 @@ export async function listProducts(query: IProductQuery): Promise<IProductListRe
           ? { name: "asc" }
           : { createdAt: "desc" };
 
-  const [totalItems, rows] = await Promise.all([
-    prisma.premiumHoneyCollection.count({ where }),
+  const findPage = (page: number) =>
     prisma.premiumHoneyCollection.findMany({
       where,
       orderBy,
-      skip: (query.page - 1) * PRODUCT_PAGE_SIZE,
+      skip: (page - 1) * PRODUCT_PAGE_SIZE,
       take: PRODUCT_PAGE_SIZE,
       include: { category: true },
-    }),
+    });
+
+  // Count & halaman diminta jalan paralel; bila `page` ternyata melewati halaman terakhir
+  // (URL lama, produk dihapus), ambil ulang halaman terakhir agar metadata cocok dengan items.
+  const [totalItems, requestedRows] = await Promise.all([
+    prisma.premiumHoneyCollection.count({ where }),
+    findPage(query.page),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalItems / PRODUCT_PAGE_SIZE));
-  const safePage = query.page > totalPages ? 1 : query.page;
+  const safePage = Math.min(query.page, totalPages);
+  const rows =
+    safePage !== query.page && totalItems > 0 ? await findPage(safePage) : requestedRows;
 
   return {
     items: rows.map(toProductView),
