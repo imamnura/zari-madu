@@ -2,42 +2,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, ArrowLeft, ArrowRight } from "lucide-react";
-import { ARTICLES } from "@/lib/constants";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { prisma } from "@/lib/prisma";
+import { getArticles } from "@/lib/data/content";
 
-// Force dynamic rendering - no caching
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-type Article = (typeof ARTICLES)[number];
-
-async function getArticles(): Promise<Article[]> {
-  try {
-    const content = await prisma.articleContent.findFirst({
-      orderBy: { updatedAt: "desc" },
-    });
-
-    if (!content || !content.articles) {
-      return ARTICLES;
-    }
-
-    // Parse articles from JSON
-    const articles =
-      typeof content.articles === "string"
-        ? JSON.parse(content.articles)
-        : content.articles;
-
-    return articles.length > 0 ? articles : ARTICLES;
-  } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("Error fetching articles:", error);
-    }
-    return ARTICLES;
-  }
-}
+// ISR: statis, di-invalidate saat admin menyimpan artikel (tag content:articles);
+// revalidate berkala sebagai jaring pengaman.
+export const revalidate = 3600;
 
 export default async function ArticlesPage() {
   const articles = await getArticles();

@@ -13,7 +13,7 @@
 | Severity | Jumlah | Selesai |
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
-| 🟠 High | 11 | 4 |
+| 🟠 High | 11 | 5 |
 | 🟡 Medium | 12 | 0 |
 | ⚪ Low | 6 | 0 |
 
@@ -36,7 +36,7 @@
 | TD-08 | Omzet bulanan dihitung dengan zona waktu server. | `app/api/admin/dashboard-stats/route.ts` | Batas bulan dalam WIB via `jakartaMonthRange()` (`lib/datetime.ts`, dipakai juga oleh nomor order). | S | ✅ Selesai |
 | TD-09 | Upload ke `public/uploads` (filesystem read-only di serverless), duplikat dengan route Cloudinary. | `app/api/admin/upload/route.ts` | Hapus route, pakai Cloudinary saja. Route & dependency `sharp` dihapus (`next` tetap membawa `sharp` opsional untuk `next/image`). | S | ✅ Selesai |
 | TD-10 | Homepage: semua section `"use client"` + ~11 fetch client ke `/api/admin/*`; `/api/admin/settings` di-fetch 5×. Konten tidak terindeks Google, LCP lambat. | `components/*Section.tsx`, `Header.tsx`, `Footer.tsx` | Data layer server `lib/data/*` dengan `unstable_cache`/`"use cache"` + `revalidateTag`; komponen animasi menerima props. Selesai: `lib/data/content.ts` (`unstable_cache` + tag, `revalidateContent()` di semua route admin konten), `Header`/`Footer` jadi Server Component, homepage statis + revalidate 1 jam. | M | ✅ Selesai |
-| TD-11 | `force-dynamic` + `revalidate = 0` di `/shop`, `/articles`, `/articles/[slug]`; listing produk dimuat client-side. | `app/shop/page.tsx`, `app/articles/**` | ISR + revalidate on-demand; render listing awal di server. | M | ⬜ |
+| TD-11 | `force-dynamic` + `revalidate = 0` di `/shop`, `/articles`, `/articles/[slug]`; listing produk dimuat client-side. | `app/shop/page.tsx`, `app/articles/**` | ISR + revalidate on-demand; render listing awal di server. Selesai: `/articles` & `/articles/[slug]` ISR (revalidate 1 jam + tag `content:articles`, `generateStaticParams`); `/shop` render listing di server dari `searchParams` via `lib/data/products.ts` (`<Suspense key>` per filter), tetap dinamis tanpa cache karena menampilkan stok. | M | ✅ Selesai |
 | TD-12 | `DashboardWrapper` polling localStorage setiap 100 ms. | `components/admin/DashboardWrapper.tsx:37` | React context untuk state sidebar. | S | ⬜ |
 | TD-13 | `LoadingProgress` progress bar palsu 1 detik di homepage. | `components/LoadingProgress.tsx` | Hapus. | S | ⬜ |
 | TD-14 | Query berurutan / N+1: dashboard-stats (6 query serial), merge cart, cron loop. | beberapa | `Promise.all`, batch query. | S | ⬜ |
@@ -86,7 +86,7 @@ gantt
     TD-09 hapus upload lokal (selesai) :done, s1e, after s1d, 1d
     section Sprint 2 - Performa
     TD-10 data layer server + cache (selesai) :done, s2a, 2026-11-26, 3d
-    TD-11 ISR shop dan artikel      :s2b, after s2a, 2d
+    TD-11 ISR shop dan artikel (selesai) :done, s2b, after s2a, 2d
     TD-12 TD-13 TD-14 quick wins    :s2c, after s2b, 1d
     section Sprint 3 - Fondasi
     TD-26 CI pipeline               :s3a, 2026-12-03, 1d

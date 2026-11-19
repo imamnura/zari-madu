@@ -98,6 +98,9 @@ logika bisnis.
 `lib/data/content.ts` (`unstable_cache` per tag + React `cache`, fallback ke `lib/constants.ts`),
 lalu diteruskan sebagai props ke komponen animasi client. Route admin yang mengubah konten wajib
 memanggil `revalidateContent(CONTENT_TAGS.<x>)`; homepage juga revalidate tiap 1 jam.
+`/articles` dan `/articles/[slug]` memakai pola yang sama (ISR + `generateStaticParams`).
+`/shop` dirender dinamis dari `searchParams` lewat `lib/data/products.ts` — tidak di-cache karena
+menampilkan stok terkini.
 
 ## 3. Model data
 

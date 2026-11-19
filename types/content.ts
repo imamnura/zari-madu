@@ -80,6 +80,13 @@ export interface IArticleSummary {
   readTime: string;
 }
 
+/** Artikel lengkap (halaman /articles); `content` berisi HTML Tiptap — wajib di-sanitize saat render. */
+export interface IArticle extends IArticleSummary {
+  author: string;
+  content: string;
+  tags: string[];
+}
+
 export interface IArticlesSectionContent {
   heading: string;
   title: string;

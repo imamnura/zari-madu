@@ -25,6 +25,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 import {
   CONTENT_TAGS,
   DEFAULT_SITE_SETTINGS,
+  getArticles,
   getArticlesSectionContent,
   getCollectionContent,
   getHeroContent,
@@ -32,12 +33,14 @@ import {
   getWhyChooseContent,
   revalidateContent,
 } from "./content";
-import { HERO_CONTENT, WHY_CHOOSE_ZARI } from "@/lib/constants";
+import { ARTICLES, HERO_CONTENT, WHY_CHOOSE_ZARI } from "@/lib/constants";
 
 // Dicatat saat modul di-load, sebelum hook test apa pun berjalan.
-const registeredTags = unstableCacheMock.mock.calls.map(
-  (call) => (call as unknown as [unknown, string[], { tags: string[] }])[2].tags,
-);
+const registrations = unstableCacheMock.mock.calls.map((call) => {
+  const [, keyParts, options] = call as unknown as [unknown, string[], { tags: string[] }];
+  return { keyParts, tags: options.tags };
+});
+const registeredTags = registrations.map((r) => r.tags);
 
 beforeEach(() => {
   for (const model of Object.values(prismaMock)) {
@@ -176,5 +179,24 @@ describe("getArticlesSectionContent", () => {
       readTime: "3 menit",
     });
     expect(content.articles[0]).not.toHaveProperty("content");
+  });
+});
+
+describe("getArticles", () => {
+  it("returns the full articles stored in the database", async () => {
+    const stored = [{ ...ARTICLES[0], slug: "dari-db", content: "<p>isi</p>" }];
+    prismaMock.articleContent.findFirst.mockResolvedValue({ articles: stored });
+    await expect(getArticles()).resolves.toEqual(stored);
+  });
+
+  it("falls back to the static articles when the database list is empty", async () => {
+    prismaMock.articleContent.findFirst.mockResolvedValue({ articles: [] });
+    await expect(getArticles()).resolves.toEqual(ARTICLES);
+  });
+
+  it("uses a cache key distinct from the homepage summary under the same tag", () => {
+    const articleEntries = registrations.filter((r) => r.tags.includes(CONTENT_TAGS.articles));
+    expect(articleEntries).toHaveLength(2);
+    expect(new Set(articleEntries.map((r) => r.keyParts.join("|"))).size).toBe(2);
   });
 });

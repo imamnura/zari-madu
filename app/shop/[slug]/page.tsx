@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { sanitizeRichHtml } from "@/lib/sanitize";
+import { toProductView } from "@/lib/data/products";
 import { ProductDetail } from "@/components/shop/ProductDetail";
 import type { IProduct } from "@/types/shop";
 
@@ -37,31 +38,10 @@ export default async function ProductSlugPage({ params }: IProductPageProps) {
   if (!dbProduct) notFound();
 
   const product: IProduct = {
-    id: dbProduct.id,
-    slug: dbProduct.slug ?? dbProduct.id,
-    name: dbProduct.name,
+    ...toProductView(dbProduct),
     // ProductDetail me-render deskripsi sebagai HTML; sanitize di server agar
     // sanitize-html tidak ikut ter-bundle ke client.
     description: sanitizeRichHtml(dbProduct.description),
-    image: dbProduct.image,
-    label: dbProduct.label,
-    price: dbProduct.price,
-    priceNumeric: dbProduct.priceNumeric,
-    stock: dbProduct.stock,
-    alwaysAvailable: dbProduct.alwaysAvailable,
-    weightGrams: dbProduct.weightGrams,
-    features: dbProduct.features,
-    category: dbProduct.category
-      ? {
-          id: dbProduct.category.id,
-          slug: dbProduct.category.slug,
-          name: dbProduct.category.name,
-          description: dbProduct.category.description,
-          image: dbProduct.category.image,
-          displayOrder: dbProduct.category.displayOrder,
-          isActive: dbProduct.category.isActive,
-        }
-      : null,
   };
 
   return (

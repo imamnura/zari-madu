@@ -145,7 +145,7 @@ zari-madu/
 │   │
 │   ├── shop/                         Shop components (NEW)
 │   │   ├── ProductCard, ProductGrid, FilterSidebar, ShopHeader, ProductDetail
-│   │   └── ShopBrowser              Client-side filterable view, used by /shop page
+│   │   └── ShopResults              Server-rendered product listing (Suspense per filter), used by /shop page
 │   │
 │   ├── cart/                         Cart components (NEW)
 │   │   ├── CartProvider             Single source of truth: guest localStorage ↔ /api/cart
@@ -240,7 +240,7 @@ Hero → About → Why Choose → Honey Collection → Partnership → Testimoni
 Pre-existing. List + slug detail.
 
 ### 4.3 Customer Shop (NEW)
-- `/shop` — Catalog with category, price, label filters + sort (newest / price asc/desc / name asc) + pagination (12/page). Server Component fetches categories; Client `ShopBrowser` fetches filtered products via `/api/products`.
+- `/shop` — Catalog with category, price, label filters + sort (newest / price asc/desc / name asc) + pagination (12/page). Server Component reads filters from `searchParams` and renders the listing via `lib/data/products.ts` (`ShopResults`); `/api/products` shares the same query.
 - `/shop/[slug]` — Product detail page (SSR for SEO with OG meta) with quantity stepper.
 - `/shop/category/[slug]` — Redirects to `/shop?category=...`.
 

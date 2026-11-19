@@ -12,6 +12,7 @@ import {
 } from "@/lib/constants";
 import type {
   IAboutContent,
+  IArticle,
   IArticleSummary,
   IArticlesSectionContent,
   ICollectionContent,
@@ -125,9 +126,10 @@ function toArticleSummary(article: IArticleSummary): IArticleSummary {
 /**
  * Bungkus loader dengan Data Cache (lintas request, invalidasi per tag) dan React `cache`
  * (dedupe dalam satu render). Error DB tidak di-cache: pengunjung mendapat konten fallback.
+ * `key` membedakan beberapa loader yang berbagi tag yang sama.
  */
-function cachedContent<T>(tag: ContentTag, load: () => Promise<T>, fallback: T) {
-  const cached = unstable_cache(load, [tag], { tags: [tag] });
+function cachedContent<T>(tag: ContentTag, load: () => Promise<T>, fallback: T, key: string = tag) {
+  const cached = unstable_cache(load, [key], { tags: [tag] });
   return cache(async (): Promise<T> => {
     try {
       return await cached();
@@ -280,4 +282,19 @@ export const getArticlesSectionContent = cachedContent(
     };
   },
   DEFAULT_ARTICLES,
+);
+
+/** Daftar artikel lengkap untuk /articles dan /articles/[slug]; kosong di DB → artikel statis. */
+export const getArticles = cachedContent(
+  CONTENT_TAGS.articles,
+  async (): Promise<IArticle[]> => {
+    const row = await prisma.articleContent.findFirst({
+      orderBy: { updatedAt: "desc" },
+      select: { articles: true },
+    });
+    const articles = jsonArray<IArticle>(row?.articles) ?? [];
+    return articles.length > 0 ? articles : ARTICLES;
+  },
+  ARTICLES,
+  "content:articles:all",
 );
