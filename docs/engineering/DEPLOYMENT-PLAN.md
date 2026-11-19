@@ -123,6 +123,16 @@ fetch ke domain lain), tambahkan origin-nya di sana — kalau tidak, browser mem
   dengan IP klien (`proxy_set_header X-Forwarded-For $remote_addr;`) agar tidak bisa dipalsukan.
 - [ ] Staging: login salah 6× dengan email sama → percobaan ke-6 ditolak "Terlalu banyak percobaan".
 
+## 3d. Insiden pembayaran (sejak TD-15)
+
+- **Butuh migration**: `prisma migrate deploy` (tabel `payment_incidents` + enum
+  `PaymentIncidentType`, aditif).
+- Dana yang masuk untuk order CANCELLED kini muncul sebagai peringatan merah di dashboard admin
+  dan badge "Perlu tinjauan" di daftar pesanan. Tindak lanjut (refund via dashboard Midtrans /
+  hubungi pelanggan) tetap manual; admin menandai selesai dengan catatan di detail pesanan.
+- [ ] Staging: bayar order sandbox setelah order dibatalkan admin → insiden muncul, lalu tandai
+      selesai → peringatan hilang.
+
 ## 4. Konfigurasi cron (prasyarat)
 
 Endpoint `POST /api/cron/expire-pending-orders` belum terjadwal di repo (tidak ada `vercel.json`).

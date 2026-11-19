@@ -40,4 +40,26 @@ describe("GET /api/admin/orders", () => {
     expect(where.status).toBe("PAID");
     expect(where.OR).toBeDefined();
   });
+  it("filters orders with open payment incidents and exposes the open count per row", async () => {
+    authMock.mockResolvedValue({ user: { role: "admin" } });
+    countMock.mockResolvedValue(1);
+    findManyMock.mockResolvedValue([
+      { id: "o1", orderNumber: "ZH-1", items: [], _count: { incidents: 2 } },
+    ]);
+
+    const res = await GET(req("/api/admin/orders?incident=open"));
+    const json = await res.json();
+
+    const args = findManyMock.mock.calls[0][0];
+    expect(args.where.incidents).toEqual({ some: { resolvedAt: null } });
+    expect(args.include._count).toEqual({
+      select: { incidents: { where: { resolvedAt: null } } },
+    });
+    expect(json.data.items[0]).toEqual({
+      id: "o1",
+      orderNumber: "ZH-1",
+      items: [],
+      openIncidentCount: 2,
+    });
+  });
 });

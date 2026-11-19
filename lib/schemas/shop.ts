@@ -88,6 +88,14 @@ const orderStatusEnum = z.enum([
   "CANCELLED",
 ]);
 
+export const resolvePaymentIncidentSchema = z.object({
+  note: z
+    .string()
+    .trim()
+    .min(5, "Catatan tindak lanjut minimal 5 karakter")
+    .max(1000, "Catatan maksimal 1000 karakter"),
+});
+
 export const adminOrderTransitionSchema = z
   .object({
     targetStatus: orderStatusEnum,

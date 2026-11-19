@@ -74,4 +74,24 @@ describe("OrdersTable", () => {
     await user.click(screen.getByRole("button", { name: "→" }));
     expect(onPageChange).toHaveBeenCalledWith(2);
   });
+  it("flags rows with open payment incidents and toggles the incident filter", async () => {
+    const user = userEvent.setup();
+    const onFilterChange = vi.fn();
+    render(
+      <OrdersTable
+        rows={[
+          { ...rows[0], id: "o2", orderNumber: "ZH-2", status: "CANCELLED", openIncidentCount: 1 },
+          rows[0],
+        ]}
+        filters={{ status: "", q: "", incident: false }}
+        onFilterChange={onFilterChange}
+        pagination={{ page: 1, totalPages: 1 }}
+        onPageChange={vi.fn()}
+      />,
+    );
+    expect(screen.getAllByText("Perlu tinjauan")).toHaveLength(1);
+
+    await user.click(screen.getByRole("checkbox", { name: /hanya yang perlu tinjauan/i }));
+    expect(onFilterChange).toHaveBeenCalledWith({ incident: true });
+  });
 });

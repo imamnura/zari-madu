@@ -46,12 +46,14 @@ interface IOrderRow {
   total: number;
   recipientName: string;
   createdAt: string;
+  /** Insiden pembayaran yang belum ditindaklanjuti (mis. dana masuk setelah batal). */
+  openIncidentCount?: number;
 }
 
 interface IOrdersTableProps {
   rows: IOrderRow[];
-  filters: { status: string; q: string };
-  onFilterChange: (next: { status?: string; q?: string }) => void;
+  filters: { status: string; q: string; incident?: boolean };
+  onFilterChange: (next: { status?: string; q?: string; incident?: boolean }) => void;
   pagination: { page: number; totalPages: number };
   onPageChange: (page: number) => void;
 }
@@ -102,6 +104,14 @@ export function OrdersTable({
             </SelectContent>
           </Select>
         </div>
+        <label className="flex items-center gap-2 text-sm sm:pb-2">
+          <input
+            type="checkbox"
+            checked={Boolean(filters.incident)}
+            onChange={(e) => onFilterChange({ incident: e.target.checked })}
+          />
+          Hanya yang perlu tinjauan
+        </label>
       </div>
 
       <div className="overflow-x-auto rounded-lg border">
@@ -139,6 +149,11 @@ export function OrdersTable({
                     >
                       {STATUS_LABEL[row.status]}
                     </Badge>
+                    {row.openIncidentCount ? (
+                      <Badge variant="destructive" className="ml-2">
+                        Perlu tinjauan
+                      </Badge>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-right">{formatRupiah(row.total)}</td>
                   <td className="px-3 py-2 text-right">

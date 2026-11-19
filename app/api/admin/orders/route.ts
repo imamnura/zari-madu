@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const status = url.searchParams.get("status");
     const search = url.searchParams.get("q")?.trim();
+    const openIncidentsOnly = url.searchParams.get("incident") === "open";
     const from = url.searchParams.get("from");
     const to = url.searchParams.get("to");
     const pageRaw = parseInt(url.searchParams.get("page") ?? "1", 10);
@@ -39,6 +40,9 @@ export async function GET(request: NextRequest) {
         ...(from ? { gte: new Date(from) } : {}),
         ...(to ? { lte: new Date(to) } : {}),
       };
+    }
+    if (openIncidentsOnly) {
+      where.incidents = { some: { resolvedAt: null } };
     }
     if (search) {
       where.OR = [
@@ -55,14 +59,20 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * PAGE_SIZE,
         take: PAGE_SIZE,
-        include: { items: true },
+        include: {
+          items: true,
+          _count: { select: { incidents: { where: { resolvedAt: null } } } },
+        },
       }),
     ]);
 
     return NextResponse.json({
       success: true,
       data: {
-        items,
+        items: items.map(({ _count, ...order }) => ({
+          ...order,
+          openIncidentCount: _count.incidents,
+        })),
         pagination: {
           page,
           pageSize: PAGE_SIZE,

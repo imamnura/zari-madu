@@ -38,6 +38,7 @@ import * as changeEmail from "./change-email/route";
 import * as changePassword from "./change-password/route";
 import * as cloudinaryUpload from "./cloudinary-upload/route";
 import * as dashboardStats from "./dashboard-stats/route";
+import * as orderIncident from "./orders/[id]/incidents/[incidentId]/route";
 import * as getEmail from "./get-email/route";
 import * as hero from "./hero-content/route";
 import * as honeyCollection from "./honey-collection/route";
@@ -56,6 +57,7 @@ const protectedHandlers: Array<[string, string, Handler]> = [
   ["change-password", "PUT", changePassword.PUT],
   ["cloudinary-upload", "POST", cloudinaryUpload.POST],
   ["dashboard-stats", "GET", dashboardStats.GET as unknown as Handler],
+  ["orders/o1/incidents/inc1", "PATCH", orderIncident.PATCH as unknown as Handler],
   ["get-email", "GET", getEmail.GET as unknown as Handler],
   ["hero-content", "PUT", hero.PUT],
   ["honey-collection", "POST", honeyCollection.POST],

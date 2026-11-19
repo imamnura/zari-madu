@@ -12,6 +12,7 @@ const {
   paymentFindFirst,
   paymentCreate,
   customerFindUnique,
+  recordPaidAfterCancel,
 } = vi.hoisted(() => ({
   verifySig: vi.fn(),
   mapOrder: vi.fn(),
@@ -23,6 +24,12 @@ const {
   paymentFindFirst: vi.fn(),
   paymentCreate: vi.fn(),
   customerFindUnique: vi.fn(),
+  recordPaidAfterCancel: vi.fn(),
+}));
+
+vi.mock("@/lib/payment-incidents", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/payment-incidents")>()),
+  recordPaidAfterCancel,
 }));
 
 vi.mock("@/lib/midtrans", () => ({
@@ -76,9 +83,11 @@ beforeEach(() => {
     paymentFindFirst,
     paymentCreate,
     customerFindUnique,
+    recordPaidAfterCancel,
   ]) {
     m.mockReset();
   }
+  paymentCreate.mockResolvedValue({ id: "p_new" });
 });
 
 describe("POST /api/payment/midtrans/notification", () => {
@@ -171,7 +180,53 @@ describe("POST /api/payment/midtrans/notification", () => {
       "ZH-20260512-0001",
       "tx-1",
     );
+    // Tercatat sebagai insiden agar muncul di dashboard admin, bukan hanya di log.
+    expect(recordPaidAfterCancel).toHaveBeenCalledWith({
+      orderId: "o1",
+      paymentId: "p_new",
+      transactionId: "tx-1",
+      grossAmount: 150000,
+    });
     errorSpy.mockRestore();
+  });
+
+  it("records the incident when the order is cancelled between the read and the PAID update", async () => {
+    verifySig.mockReturnValue(true);
+    // Saat dibaca order masih PENDING; cron membatalkannya sebelum update PAID dijalankan.
+    orderFindUnique
+      .mockResolvedValueOnce({ id: "o1", status: "PENDING", orderNumber: "ZH-20260512-0001", items: [] })
+      .mockResolvedValueOnce({ status: "CANCELLED" });
+    mapOrder.mockReturnValue("PAID");
+    mapPayment.mockReturnValue("SETTLEMENT");
+    paymentFindFirst.mockResolvedValue(null);
+    orderUpdateMany.mockResolvedValue({ count: 0 });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(jsonReq(baseNotif));
+
+    expect(res.status).toBe(200);
+    expect(recordPaidAfterCancel).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: "o1", transactionId: "tx-1" }),
+    );
+    expect(sendEmail).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("does not raise an incident when a second settlement arrives for an already PAID order", async () => {
+    verifySig.mockReturnValue(true);
+    orderFindUnique
+      .mockResolvedValueOnce({ id: "o1", status: "PAID", orderNumber: "ZH-20260512-0001", items: [] })
+      .mockResolvedValueOnce({ status: "PAID" });
+    mapOrder.mockReturnValue("PAID");
+    mapPayment.mockReturnValue("SETTLEMENT");
+    paymentFindFirst.mockResolvedValue(null);
+    orderUpdateMany.mockResolvedValue({ count: 0 });
+
+    const res = await POST(jsonReq({ ...baseNotif, transaction_id: "tx-2" }));
+
+    expect(res.status).toBe(200);
+    expect(recordPaidAfterCancel).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it("cancels a PENDING order on expire", async () => {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { OrdersTable } from "@/components/admin/OrdersTable";
 import type { OrderStatusValue } from "@/types/shop";
 
@@ -11,12 +12,33 @@ interface IOrderRow {
   total: number;
   recipientName: string;
   createdAt: string;
+  openIncidentCount: number;
+}
+
+interface IOrderFilters {
+  status: string;
+  q: string;
+  incident: boolean;
 }
 
 export default function AdminOrdersPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminOrders />
+    </Suspense>
+  );
+}
+
+function AdminOrders() {
+  const params = useSearchParams();
   const [rows, setRows] = useState<IOrderRow[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
-  const [filters, setFilters] = useState({ status: "", q: "" });
+  // ?incident=open dari peringatan di dashboard utama langsung memfilter pesanan bermasalah.
+  const [filters, setFilters] = useState<IOrderFilters>({
+    status: "",
+    q: "",
+    incident: params.get("incident") === "open",
+  });
 
   const fetchOrders = useCallback(
     (overrides?: Partial<typeof filters & { page: number }>) => {
@@ -25,6 +47,7 @@ export default function AdminOrdersPage() {
       const qs = new URLSearchParams();
       if (next.status) qs.set("status", next.status);
       if (next.q) qs.set("q", next.q);
+      if (next.incident) qs.set("incident", "open");
       if (page > 1) qs.set("page", String(page));
       fetch(`/api/admin/orders?${qs.toString()}`, { cache: "no-store" })
         .then((r) => r.json())
@@ -46,7 +69,7 @@ export default function AdminOrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleFilterChange = (next: Partial<{ status: string; q: string }>) => {
+  const handleFilterChange = (next: Partial<IOrderFilters>) => {
     setFilters((prev) => {
       const merged = { ...prev, ...next };
       fetchOrders({ ...merged, page: 1 });

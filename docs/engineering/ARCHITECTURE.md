@@ -116,6 +116,8 @@ erDiagram
     PremiumHoneyCollection ||--o{ OrderItem : "dipesan"
     Order ||--o{ OrderItem : "berisi"
     Order ||--o{ Payment : "dibayar lewat"
+    Order ||--o{ PaymentIncident : "insiden"
+    Payment |o--o{ PaymentIncident : "pemicu"
 
     Customer {
         string id PK
@@ -153,6 +155,13 @@ erDiagram
         string transactionId
         enum status "PENDING SETTLEMENT EXPIRE ..."
         json rawResponse
+    }
+    PaymentIncident {
+        enum type "PAID_AFTER_CANCEL"
+        string transactionId "UK bersama type"
+        int grossAmount "rupiah"
+        datetime resolvedAt "null = belum ditindaklanjuti"
+        string resolvedBy
     }
     ShippingRate {
         string province UK

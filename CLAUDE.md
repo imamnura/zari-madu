@@ -55,6 +55,7 @@ lib/
   security-headers.ts  # CSP + security headers (dipasang di next.config.ts); tambah origin pihak ketiga di sini
   rate-limit.ts        # rate limit fixed-window di tabel rate_limits (RATE_LIMITS, consumeRateLimit)
   auth-errors.ts       # kode error login (server → client) + pesan Bahasa Indonesia
+  payment-incidents.ts # insiden pembayaran (PAID_AFTER_CANCEL) untuk tindak lanjut admin
   schemas/shop.ts      # zod schema input (checkout, cart, order transition, dll)
   data/content.ts      # getter konten publik ber-cache (tag) + revalidateContent untuk route admin
   data/products.ts     # query listing produk (/shop & /api/products), tidak di-cache karena stok

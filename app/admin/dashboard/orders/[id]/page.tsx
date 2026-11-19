@@ -5,6 +5,10 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { OrderStatusStepper } from "@/components/admin/OrderStatusStepper";
+import {
+  PaymentIncidentPanel,
+  type IPaymentIncidentView,
+} from "@/components/admin/PaymentIncidentPanel";
 import type { OrderStatusValue } from "@/types/shop";
 
 const STATUS_LABEL: Record<OrderStatusValue, string> = {
@@ -36,6 +40,7 @@ interface IAdminOrderDetail {
   customer: { email: string; name: string; phone: string | null } | null;
   items: Array<{ id: string; productName: string; quantity: number; unitPrice: number; subtotal: number }>;
   payments: Array<{ id: string; status: string; paymentMethod: string | null; createdAt: string }>;
+  incidents: IPaymentIncidentView[];
 }
 
 function formatRupiah(n: number): string {
@@ -84,6 +89,22 @@ export default function AdminOrderDetailPage({
     refresh();
   };
 
+  const onResolveIncident = async (incidentId: string, note: string) => {
+    const res = await fetch(`/api/admin/orders/${id}/incidents/${incidentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      toast.error(json.error ?? "Gagal menandai insiden selesai");
+      return false;
+    }
+    toast.success("Insiden ditandai selesai");
+    refresh();
+    return true;
+  };
+
   if (loading) return <p>Memuat...</p>;
   if (!order) return <p>Tidak ditemukan</p>;
 
@@ -98,6 +119,8 @@ export default function AdminOrderDetailPage({
         </div>
         <Badge>{STATUS_LABEL[order.status]}</Badge>
       </div>
+
+      <PaymentIncidentPanel incidents={order.incidents ?? []} onResolve={onResolveIncident} />
 
       <section>
         <h2 className="mb-2 font-semibold">Status</h2>

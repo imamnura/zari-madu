@@ -37,6 +37,7 @@ export async function GET(
       include: {
         items: true,
         payments: { orderBy: { createdAt: "desc" } },
+        incidents: { orderBy: { createdAt: "desc" } },
         customer: { select: { id: true, email: true, name: true, phone: true } },
       },
     });

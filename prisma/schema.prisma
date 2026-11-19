@@ -158,6 +158,32 @@ enum OrderStatus {
   CANCELLED
 }
 
+// Kejadian pembayaran yang butuh tindak lanjut manual admin (TD-15).
+enum PaymentIncidentType {
+  PAID_AFTER_CANCEL // dana masuk (settlement) untuk order yang sudah CANCELLED
+}
+
+model PaymentIncident {
+  id             String              @id @default(cuid())
+  orderId        String
+  paymentId      String?
+  type           PaymentIncidentType
+  transactionId  String
+  grossAmount    Int? // nominal dari notifikasi Midtrans, rupiah
+  createdAt      DateTime            @default(now())
+  resolvedAt     DateTime?
+  resolvedBy     String? // email admin yang menandai selesai
+  resolutionNote String?             @db.Text
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@unique([transactionId, type])
+  @@index([orderId])
+  @@index([resolvedAt])
+  @@map("payment_incidents")
+}
+
 enum PaymentStatus {
   PENDING
   SETTLEMENT
@@ -294,9 +320,10 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  items    OrderItem[]
-  payments Payment[]
+  customer  Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items     OrderItem[]
+  payments  Payment[]
+  incidents PaymentIncident[]
 
   @@index([customerId])
   @@index([status])
@@ -334,7 +361,8 @@ model Payment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  incidents PaymentIncident[]
 
   @@unique([transactionId, status])
   @@index([orderId])

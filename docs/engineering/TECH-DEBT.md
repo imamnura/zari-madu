@@ -13,7 +13,7 @@
 | Severity | Jumlah | Selesai |
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
-| 🟠 High | 11 | 8 |
+| 🟠 High | 11 | 9 |
 | 🟡 Medium | 12 | 4 |
 | ⚪ Low | 6 | 0 |
 
@@ -40,7 +40,7 @@
 | TD-12 | `DashboardWrapper` polling localStorage setiap 100 ms. | `components/admin/DashboardWrapper.tsx:37` | React context untuk state sidebar. Selesai: hook `useSidebarExpanded` (`useSyncExternalStore` + localStorage) dipegang `DashboardWrapper`, diteruskan ke `AdminSidebar` lewat props — polling dihapus. | S | ✅ Selesai |
 | TD-13 | `LoadingProgress` progress bar palsu 1 detik di homepage. | `components/LoadingProgress.tsx` | Hapus. Selesai: komponen dihapus dari homepage; loading admin koleksi madu memakai spinner yang sama dengan halaman admin lain. | S | ✅ Selesai |
 | TD-14 | Query berurutan / N+1: dashboard-stats (6 query serial), merge cart, cron loop. | beberapa | `Promise.all`, batch query. Selesai: dashboard-stats 6 query via `Promise.all`; merge cart 1 `findMany` + 1 `createMany` (entri duplikat digabung); cron membatalkan paralel maks 5 dengan `allSettled` (gagal → 500 + `failed`), restore stok urut `productId` agar tidak deadlock. | S | ✅ Selesai |
-| TD-15 | Webhook PAID setelah order CANCELLED hanya di-log (`PAID_AFTER_CANCEL`), belum ada flag/alert di dashboard. | webhook | Kolom `needsReview` / tabel `PaymentIncident` + badge di admin. | M | ⬜ |
+| TD-15 | Webhook PAID setelah order CANCELLED hanya di-log (`PAID_AFTER_CANCEL`), belum ada flag/alert di dashboard. | webhook | Kolom `needsReview` / tabel `PaymentIncident` + badge di admin. Selesai: tabel `payment_incidents` (migration `20261119130000_add_payment_incidents`, idempoten per transaksi); webhook membaca ulang status sebelum mencatat (menutup race dengan cron); admin: peringatan di dashboard, badge + filter "perlu tinjauan" di daftar pesanan, panel insiden + "Tandai selesai" (catatan wajib, atomik) di detail pesanan. | M | ✅ Selesai |
 | TD-16 | `/api/products`: jika `page > totalPages`, metadata bilang page 1 tapi `items` kosong. | `app/api/products/route.ts` | Hitung `safePage` sebelum query. | S | ⬜ |
 | TD-35 | Cron `expire-pending-orders` belum dijadwalkan (tidak ada `vercel.json`/crontab). Order PENDING yang tidak dibayar tidak pernah kedaluwarsa, stoknya tertahan selamanya. Endpoint hanya menerima `POST`, sedangkan Vercel Cron memanggil `GET`. | `app/api/cron/expire-pending-orders/route.ts` | Tambah handler `GET` (logika sama, auth `Bearer CRON_SECRET`), daftarkan jadwal per jam; lihat DEPLOYMENT-PLAN §4. Ditunda sesuai keputusan 2026-11-19. | S | ⬜ |
 
@@ -92,7 +92,7 @@ gantt
     TD-26 CI pipeline (selesai)     :done, s3a, 2026-12-03, 1d
     TD-22 TD-23 env dan headers (selesai) :done, s3b, after s3a, 1d
     TD-24 rate limit (selesai)      :done, s3c, after s3b, 2d
-    TD-15 incident pembayaran       :s3d, after s3c, 2d
+    TD-15 incident pembayaran (selesai) :done, s3d, after s3c, 2d
     TD-35 jadwal cron expire        :s3e, after s3d, 1d
     section Sprint 4 - Refactor
     TD-17 normalisasi CMS           :s4a, 2026-12-10, 4d

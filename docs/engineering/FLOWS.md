@@ -119,8 +119,12 @@ sequenceDiagram
         WH->>DB: UPDATE Order SET PAID WHERE status = PENDING
         alt count = 1
             WH->>EM: email konfirmasi
-        else order sudah CANCELLED
-            WH->>WH: log PAID_AFTER_CANCEL (tindak lanjut manual)
+        else count = 0
+            WH->>DB: baca ulang status Order (bisa baru dibatalkan cron)
+            opt status = CANCELLED
+                WH->>DB: INSERT PaymentIncident PAID_AFTER_CANCEL (idempoten)
+                Note over WH,DB: muncul di dashboard admin sampai ditandai selesai
+            end
         end
     else expire / cancel / deny / failure
         WH->>ORD: cancelOrder(fromStatuses = PENDING)

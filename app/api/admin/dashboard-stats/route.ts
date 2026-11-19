@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/api/guards";
 import { jakartaMonthRange } from "@/lib/datetime";
 import { prisma } from "@/lib/prisma";
+import { countOpenPaymentIncidents } from "@/lib/payment-incidents";
 
 export async function GET() {
   try {
@@ -23,6 +24,7 @@ export async function GET() {
       partnershipContentResult,
       pendingOrderCount,
       revenueAggregate,
+      openPaymentIncidentCount,
     ] = await Promise.all([
       prisma.articleContent.findFirst({ select: { articles: true } }),
       prisma.premiumHoneyCollection.count(),
@@ -38,6 +40,8 @@ export async function GET() {
           paidAt: { gte: month.start, lt: month.end },
         },
       }),
+      // Insiden pembayaran yang belum ditindaklanjuti (mis. dana masuk setelah order batal)
+      countOpenPaymentIncidents(),
     ]);
 
     const articleCount = countJsonArray(articleContentResult?.articles);
@@ -54,6 +58,7 @@ export async function GET() {
         partnershipCount,
         pendingOrderCount,
         monthlyRevenue,
+        openPaymentIncidentCount,
       },
     });
   } catch (error) {

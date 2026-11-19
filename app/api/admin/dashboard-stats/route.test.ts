@@ -8,6 +8,9 @@ const { authMock, aggregateMock, orderCountMock, articleFindFirstMock } = vi.hoi
 }));
 
 vi.mock("@/lib/auth", () => ({ auth: authMock }));
+vi.mock("@/lib/payment-incidents", () => ({
+  countOpenPaymentIncidents: vi.fn().mockResolvedValue(2),
+}));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     articleContent: { findFirst: articleFindFirstMock },
@@ -50,6 +53,7 @@ describe("GET /api/admin/dashboard-stats", () => {
     expect(res.status).toBe(200);
     expect(body.data.monthlyRevenue).toBe(250000);
     expect(body.data.pendingOrderCount).toBe(4);
+    expect(body.data.openPaymentIncidentCount).toBe(2);
     const { paidAt } = aggregateMock.mock.calls[0][0].where;
     expect(paidAt.gte.toISOString()).toBe("2026-11-30T17:00:00.000Z");
     expect(paidAt.lt.toISOString()).toBe("2026-12-31T17:00:00.000Z");

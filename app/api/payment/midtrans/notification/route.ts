@@ -6,6 +6,7 @@ import {
   verifyNotificationSignature,
 } from "@/lib/midtrans";
 import { cancelOrder } from "@/lib/orders";
+import { parseGrossAmount, recordPaidAfterCancel } from "@/lib/payment-incidents";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import type { IMidtransNotification, IOrderView } from "@/types/shop";
 
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, data: { idempotent: true } });
     }
 
-    await prisma.payment.create({
+    const payment = await prisma.payment.create({
       data: {
         orderId: order.id,
         provider: "midtrans",
@@ -109,8 +110,21 @@ export async function POST(request: NextRequest) {
         data: { status: "PAID", paidAt: new Date() },
       });
       if (count === 0) {
-        if (order.status === "CANCELLED") {
-          // Dana masuk untuk order yang sudah batal (expired/cancel) — perlu tindak lanjut admin.
+        // Baca ulang: status saat findUnique di atas bisa sudah basi (mis. cron membatalkan
+        // order tepat sebelum update), jadi jangan mengandalkan `order.status`.
+        const current = await prisma.order.findUnique({
+          where: { id: order.id },
+          select: { status: true },
+        });
+        if (current?.status === "CANCELLED") {
+          // Dana masuk untuk order yang sudah batal — dicatat sebagai insiden agar muncul di
+          // dashboard admin untuk tindak lanjut (refund / hubungi pelanggan).
+          await recordPaidAfterCancel({
+            orderId: order.id,
+            paymentId: payment.id,
+            transactionId: body.transaction_id,
+            grossAmount: parseGrossAmount(body.gross_amount),
+          });
           console.error(
             "[midtrans-webhook] PAID_AFTER_CANCEL",
             order.orderNumber,

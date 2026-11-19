@@ -21,6 +21,7 @@ import {
   Activity,
   Package,
   DollarSign,
+  AlertTriangle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -32,6 +33,7 @@ export default function AdminDashboardPage() {
     partnerships: 0,
     pendingOrders: 0,
     monthlyRevenue: 0,
+    openPaymentIncidents: 0,
   });
 
   const [visitorData, setVisitorData] = useState<number[]>([
@@ -51,6 +53,7 @@ export default function AdminDashboardPage() {
             partnerships: data.data.partnershipCount,
             pendingOrders: data.data.pendingOrderCount ?? 0,
             monthlyRevenue: data.data.monthlyRevenue ?? 0,
+            openPaymentIncidents: data.data.openPaymentIncidentCount ?? 0,
           });
         }
       } catch (error) {
@@ -160,6 +163,26 @@ export default function AdminDashboardPage() {
           Kelola seluruh konten website dengan mudah dan cepat
         </p>
       </div>
+
+      {stats.openPaymentIncidents > 0 ? (
+        <div
+          role="alert"
+          className="flex flex-col gap-3 rounded-xl border-2 border-red-300 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+            <p className="text-sm text-red-900">
+              <span className="font-semibold">
+                {stats.openPaymentIncidents} insiden pembayaran perlu ditindaklanjuti.
+              </span>{" "}
+              Dana sudah masuk untuk pesanan yang sudah dibatalkan — refund atau proses ulang.
+            </p>
+          </div>
+          <Button asChild size="sm" variant="destructive">
+            <Link href="/admin/dashboard/orders?incident=open">Lihat pesanan</Link>
+          </Button>
+        </div>
+      ) : null}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
