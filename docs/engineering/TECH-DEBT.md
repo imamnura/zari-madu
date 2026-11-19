@@ -14,7 +14,7 @@
 |---|---|---|
 | 🔴 Critical | 6 | 4 |
 | 🟠 High | 11 | 8 |
-| 🟡 Medium | 12 | 2 |
+| 🟡 Medium | 12 | 3 |
 | ⚪ Low | 6 | 0 |
 
 ## 🔴 Critical — keamanan & integritas data
@@ -54,7 +54,7 @@
 | TD-20 | Duplikasi: mapper `toOrderView` (webhook & admin inline), helper `JSON.parse` di tiap route konten, guard auth admin lama di categories/orders/shipping-rates. | `lib/mappers/order.ts`, `lib/content.ts`, pakai `getAdminSession` di semua route. | S | ⬜ |
 | TD-21 | Halaman admin 500–950 baris (`articles/page.tsx` 952). | Pecah ke komponen form + hook data. | M | ⬜ |
 | TD-22 | Tidak ada validasi env terpusat; Turnstile *fail-open* bila belum dikonfigurasi di production. | `lib/env.ts` (zod), fail-closed di production. Selesai: semua env server dibaca lewat `getServerEnv()`; `instrumentation.ts` menolak start bila `DATABASE_URL`/`AUTH_SECRET` hilang dan me-log env fitur yang kosong; `checkTurnstile()` menolak login admin & registrasi di production bila Turnstile belum dikonfigurasi. Lihat DEPLOYMENT-PLAN §3a. | S | ✅ Selesai |
-| TD-23 | Tidak ada security headers (CSP, HSTS, frame-ancestors). | `headers()` di `next.config.ts`. | S | ⬜ |
+| TD-23 | Tidak ada security headers (CSP, HSTS, frame-ancestors). | `headers()` di `next.config.ts`. Selesai: `lib/security-headers.ts` — CSP (allowlist Midtrans, Turnstile, GA, Google Maps; `frame-ancestors 'none'`, `object-src 'none'`), HSTS (production), X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy. `script-src` tetap `'unsafe-inline'` karena nonce mematikan ISR. Darurat: `CSP_REPORT_ONLY=true`. | S | ✅ Selesai |
 | TD-24 | Tidak ada rate limit (login, register, track order, retry, checkout); login customer tanpa captcha. | Rate limiter (Upstash/Redis atau tabel DB). | M | ⬜ |
 | TD-25 | Role di JWT tidak dicek ulang ke DB; ganti password tidak menginvalidasi sesi lama. | `tokenVersion` di Admin/Customer, cek di callback `jwt`. | M | ⬜ |
 | TD-26 | Tidak ada CI (tsc + lint + test + build). | Pipeline CI. Selesai: GitHub Actions `.github/workflows/ci.yml` (repo di GitHub) — tsc, lint, test, `prisma migrate deploy` ke Postgres kosong, build; jalan di push `master`/`develop-nextjs` dan setiap PR. | S | ✅ Selesai |
@@ -90,7 +90,7 @@ gantt
     TD-12 TD-13 TD-14 quick wins (selesai) :done, s2c, after s2b, 1d
     section Sprint 3 - Fondasi
     TD-26 CI pipeline (selesai)     :done, s3a, 2026-12-03, 1d
-    TD-22 TD-23 env dan headers     :s3b, after s3a, 1d
+    TD-22 TD-23 env dan headers (selesai) :done, s3b, after s3a, 1d
     TD-24 rate limit                :s3c, after s3b, 2d
     TD-15 incident pembayaran       :s3d, after s3c, 2d
     TD-35 jadwal cron expire        :s3e, after s3d, 1d

@@ -39,6 +39,9 @@ const serverEnvSchema = z.object({
   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: optionalString,
   CLOUDINARY_API_KEY: optionalString,
   CLOUDINARY_API_SECRET: optionalString,
+
+  /** Darurat: kirim CSP sebagai Report-Only bila memblokir layanan pihak ketiga (butuh redeploy). */
+  CSP_REPORT_ONLY: flag,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

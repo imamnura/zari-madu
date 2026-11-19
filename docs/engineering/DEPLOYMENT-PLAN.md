@@ -98,6 +98,19 @@ Env server dibaca lewat `lib/env.ts`; `instrumentation.ts` memeriksanya saat ser
       Production **dan** Preview (Preview juga berjalan dengan `NODE_ENV=production`).
 - [ ] Setelah deploy: cek log start tidak memuat `[lib/env] Env production belum diset`.
 
+## 3b. Security headers / CSP (sejak TD-23)
+
+CSP diatur di `lib/security-headers.ts`. Saat menambah layanan pihak ketiga (script, iframe,
+fetch ke domain lain), tambahkan origin-nya di sana — kalau tidak, browser memblokirnya.
+
+- [ ] Staging: checkout sampai popup Snap terbuka dan pembayaran sandbox selesai.
+- [ ] Staging: widget Turnstile tampil di `/admin/login` dan `/register`, login/registrasi berhasil.
+- [ ] Staging: Google Analytics mengirim pageview (Realtime), peta di footer tampil.
+- [ ] Console browser bebas pesan `Refused to …` dari CSP aplikasi (pesan CSP dari dalam
+      iframe Midtrans adalah policy milik Midtrans, bukan milik kita).
+- Darurat bila CSP memblokir layanan di production: set `CSP_REPORT_ONLY=true` lalu redeploy
+  (header dibaca saat build), perbaiki allowlist, kemudian hapus variabel tersebut.
+
 ## 4. Konfigurasi cron (prasyarat)
 
 Endpoint `POST /api/cron/expire-pending-orders` belum terjadwal di repo (tidak ada `vercel.json`).
